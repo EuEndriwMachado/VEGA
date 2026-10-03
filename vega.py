@@ -1226,6 +1226,10 @@ def main():
             question = "Oi, Endriw. Aqui é a VEGA. Quer que eu leia o resumo das três principais notícias?"
             print(f"Vega: {question}")
             emit_vega_status(question)
+            # Painel de notícias abre JUNTO com a pergunta: o usuário já vê
+            # as manchetes enquanto decide (não só depois de confirmar).
+            if items:
+                vega_ui.tool_result_ready.emit("news", {"items": items, "startup": True})
             news_prompt_active.set()
             set_speaking(True)
             falar(question)
@@ -1235,7 +1239,6 @@ def main():
         finally:
             news_prompt_active.clear()
 
-        vega_ui.tool_result_ready.emit("news", {"items": items, "startup": True})
         awaiting_news_confirmation.set()
 
         mark_activation_update_sent()
@@ -1442,6 +1445,13 @@ def main():
                     try:
                         falar(response)
                         speaker.wait_until_done(timeout_seconds=45.0)
+                        # Pós-leitura: sugestão proativa de vídeos em alta
+                        # conectados ao momento (continuidade da conversa).
+                        if confirmation and not response_cancelled.is_set():
+                            followup = "Se quiser, me pede que eu abro os vídeos que estão bombando hoje."
+                            emit_vega_status(followup)
+                            falar(followup)
+                            speaker.wait_until_done(timeout_seconds=20.0)
                     except Exception:
                         pass
                     finally:

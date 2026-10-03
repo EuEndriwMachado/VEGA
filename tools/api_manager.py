@@ -141,7 +141,8 @@ class ToolManager:
             "create_document": ["criar documento", "gerar relatorio", "criar arquivo markdown"],
             "create_presentation": ["criar apresentacao", "slides sobre", "roteiro de apresentacao"],
             "report": ["relatorio executivo", "relatorio vega", "resumo executivo"],
-            "trending_videos": ["videos em alta", "videos populares", "youtube em alta", "principais videos", "videos da internet"],
+            "trending_videos": ["videos em alta", "videos populares", "youtube em alta", "principais videos", "videos da internet", "abre os videos", "abre os videos em alta", "mostra os videos em alta", "me mostra os videos", "videos do momento"],
+            "news": ["noticias de hoje", "abre as noticias", "abra as noticias", "mostra as noticias", "mostre as noticias", "leia as noticias", "manchetes de hoje", "principais noticias", "o que aconteceu hoje", "novidades de hoje"],
             "summarize_document": ["resume pdf", "resuma pdf", "resume esse pdf", "resuma esse pdf", "leia pdf", "leitura de pdf"],
         }
 
