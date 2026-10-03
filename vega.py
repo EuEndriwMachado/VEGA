@@ -36,6 +36,7 @@ from core.audio.voice import VegaVoice
 from core.audio.speaker import VegaSpeaker
 from core.vision.camera import VegaCamera
 from core.actions.commands import VegaCommands
+from core.orchestration import ConversationState, SESSION_METRICS
 from database.viewer import DatabaseViewer
 
 
@@ -793,6 +794,14 @@ def main():
 
     state_lock = threading.Lock()
 
+    # Máquina de estados única da conversa (IDLE/LISTENING/.../SPEAKING).
+    # Substitui a combinação de booleanos independentes por transições
+    # explícitas e validadas.
+    def _on_state_change(old, new):
+        print(f"[STATE] {old} -> {new}")
+
+    conv_state = ConversationState(initial=ConversationState.IDLE, on_change=_on_state_change)
+
     session_active = False
 
     speaking = False
@@ -843,6 +852,14 @@ def main():
             speaking = value
 
         try:
+            if value:
+                conv_state.transition(ConversationState.SPEAKING)
+            elif conv_state.state == ConversationState.SPEAKING:
+                conv_state.transition(ConversationState.LISTENING)
+        except Exception:
+            pass
+
+        try:
 
             QMetaObject.invokeMethod(
                 vega_ui,
@@ -867,8 +884,16 @@ def main():
         response_cancelled.set()
         speaker.interrupt()
         brain.cancel_current_response()
+        try:
+            conv_state.transition(ConversationState.INTERRUPTED)
+        except Exception:
+            pass
         atualizar_audio(0.0)
         set_speaking(False)
+        try:
+            conv_state.transition(ConversationState.LISTENING)
+        except Exception:
+            pass
         return True
 
     # ==========================================================
@@ -920,7 +945,7 @@ def main():
     # FALAR
     # ==========================================================
 
-    def falar(text):
+    def falar(text, trace=None):
 
         if not text:
             return
@@ -938,7 +963,8 @@ def main():
             )
 
             speaker.speak(
-                text
+                text,
+                turn_trace=trace,
             )
 
         except Exception as error:
@@ -947,6 +973,8 @@ def main():
                 "\n[VegaSpeaker] "
                 f"Erro: {error}"
             )
+
+            SESSION_METRICS.record(errors=1)
 
     globals()["vega_status_speaker"] = falar
 
@@ -1137,6 +1165,7 @@ def main():
                 print(f"Você: {texto}")
                 print("Vega: ", end="", flush=True)
                 image = _qimage_to_pil(imagem) if imagem is not None else None
+                trace = brain.current_trace
                 for chunk in brain.process_stream(str(texto), image=image):
                     if response_cancelled.is_set():
                         break
@@ -1151,15 +1180,15 @@ def main():
                     speech_buffer += chunk_text
                     sentences, speech_buffer = extract_sentences(speech_buffer)
                     for sentence in sentences:
-                        falar(sentence)
+                        falar(sentence, trace=trace)
                         spoke_sentences = True
                 print()
                 remaining_text = speech_buffer.strip()
                 if not response_cancelled.is_set():
                     if remaining_text:
-                        falar(remaining_text)
+                        falar(remaining_text, trace=trace)
                     elif full_response.strip() and not spoke_sentences:
-                        falar(full_response.strip())
+                        falar(full_response.strip(), trace=trace)
                 if not response_cancelled.is_set() and speaker.is_speaking:
                     speaker.wait_until_done()
             except Exception as error:
@@ -1220,6 +1249,14 @@ def main():
         set_session_active(
             False
         )
+
+        try:
+            conv_state.transition(ConversationState.IDLE)
+        except Exception:
+            pass
+
+        # Resumo objetivo de métricas da sessão.
+        print(SESSION_METRICS.summary_line())
 
         # ------------------------------------------------------
         # ESPERAR VOZ TERMINAR
@@ -1752,6 +1789,7 @@ def main():
             )
 
             atualizar_processamento(True)
+            trace = brain.current_trace
 
             try:
 
@@ -1789,16 +1827,16 @@ def main():
 
                     sentences, speech_buffer = extract_sentences(speech_buffer)
                     for sentence in sentences:
-                        falar(sentence)
+                        falar(sentence, trace=trace)
                         spoke_sentences = True
 
                 else:
                     final_text = full_response.strip()
                     remaining_text = speech_buffer.strip()
                     if remaining_text:
-                        falar(remaining_text)
+                        falar(remaining_text, trace=trace)
                     elif final_text and not spoke_sentences:
-                        falar(final_text)
+                        falar(final_text, trace=trace)
 
                 print()
                 print()
@@ -1817,6 +1855,14 @@ def main():
                 atualizar_audio(0.0)
                 set_speaking(False)
                 continue
+
+            # ==================================================
+            # RELATÓRIO DE LATÊNCIA DO TURNO
+            # ==================================================
+
+            turn_trace = brain.current_trace
+            if turn_trace is not None:
+                print(f"[LATENCY] {turn_trace.report()}")
 
             # ==================================================
             # ESPERAR ÁUDIO
@@ -1872,6 +1918,10 @@ def main():
         set_session_active(True)
         news_prompt_active.clear()
         awaiting_news_confirmation.clear()
+        try:
+            conv_state.transition(ConversationState.LISTENING)
+        except Exception:
+            pass
         start_background_music(path=choose_random_background_music(), volume=0.08)
 
         activation_count += 1

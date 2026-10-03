@@ -25,6 +25,11 @@ from core.security.security import VegaSecurity
 from core.security.file_security import FileSecurity
 from core.brain.agent_framework import AgentOrchestrator
 from core.agent_state import AgentStateManager
+from core.orchestration import (
+    ConversationOrchestrator,
+    LatencyTrace,
+    SESSION_METRICS,
+)
 import re
 import unicodedata
 from datetime import timedelta
@@ -51,6 +56,8 @@ class VegaBrain:
             max_history=MAX_HISTORY
         )
         self.agent_state = AgentStateManager(self.conversation.context)
+        self.orchestrator = ConversationOrchestrator()
+        self.current_trace = None
         self.daily_support = VegaDailySupport()
         self.productivity = ProductivityTools()
         self.environment_callback = None
@@ -642,6 +649,7 @@ class VegaBrain:
     def cancel_current_response(self):
         self._response_cancelled.set()
         self.ai.cancel_generation()
+        SESSION_METRICS.record(cancelled_turns=1)
 
     def _stream_model_response(self, messages, image=None):
         structured_stream = getattr(self.ai, "chat_stream_with_tools", None)
@@ -856,6 +864,39 @@ class VegaBrain:
             return
 
         # ======================================================
+        # ORQUESTRAÇÃO CONVERSACIONAL (stream)
+        # ======================================================
+        # Intenção do turno (cancelamento/correção/continuação) e
+        # reescrita de referências ("isso", "ele", "aquilo") resolvidas
+        # ANTES do processamento normal.
+
+        trace = LatencyTrace(turn_id=SESSION_METRICS.turns)
+        self.current_trace = trace
+        trace.mark("stt_done")
+
+        intent = self.orchestrator.classify_turn_intent(normalized)
+        if intent == "cancel":
+            cancel_response = self.orchestrator.handle_turn_intent(normalized)
+            if cancel_response:
+                trace.mark("context_ready")
+                trace.mark("first_token")
+                trace.mark("response_done")
+                self.orchestrator.record_user_turn(normalized)
+                self.orchestrator.record_assistant_turn(cancel_response)
+                SESSION_METRICS.record_turn(trace)
+                yield cancel_response
+                return
+
+        rewritten_text, was_rewritten = self.orchestrator.resolve_references(normalized)
+        if not was_rewritten and intent == "continuation" and self.orchestrator.task.state != "pending":
+            SESSION_METRICS.record(context_misses=1)
+
+        if intent == "new" and self._looks_like_action_command(normalized):
+            self.orchestrator.start_task("command", target=normalized[:80])
+
+        self.orchestrator.handle_turn_intent(normalized)
+
+        # ======================================================
         # MEMÓRIA / IA
         # ======================================================
 
@@ -865,7 +906,7 @@ class VegaBrain:
         )
 
         self.conversation.add_user_message(
-            text
+            rewritten_text
         )
 
         self.agent_state.observe(text)
@@ -912,7 +953,10 @@ class VegaBrain:
                 "content": "O contexto parece sério ou urgente. Reduza humor e sarcasmo, seja clara, cuidadosa e objetiva.",
             })
 
+        trace.mark("context_ready")
+
         full_response = ""
+        first_token_marked = False
 
         for chunk in self._stream_model_response(messages, image=image):
 
@@ -926,30 +970,63 @@ class VegaBrain:
             if not chunk_text:
                 continue
 
+            if not first_token_marked:
+                trace.mark("first_token")
+                first_token_marked = True
+
             full_response += chunk_text
 
             yield chunk_text
+
+        trace.mark("response_done")
 
         if self._response_cancelled.is_set():
             partial_response = full_response.strip()
             if partial_response:
                 self.conversation.add_assistant_message(partial_response)
+                self.orchestrator.record_assistant_turn(partial_response)
                 self.memory.add_daily_message("assistant", partial_response)
+            SESSION_METRICS.record_turn(trace)
             return
 
         full_response = full_response.strip()
 
         if not full_response:
+            SESSION_METRICS.record_turn(trace)
             return
 
+        # Anti-repetição: varia a abertura se repetir a resposta anterior.
+        final_response = self.orchestrator.varied_answer(full_response)
+
+        self.orchestrator.record_user_turn(normalized, rewritten=rewritten_text)
+        self.orchestrator.record_assistant_turn(final_response)
+
         self.conversation.add_assistant_message(
-            full_response
+            final_response
         )
 
         self.memory.add_daily_message(
             "assistant",
-            full_response
+            final_response
         )
+
+        SESSION_METRICS.record_turn(trace)
+
+    # ==========================================================
+    # ORQUESTRAÇÃO CONVERSACIONAL
+    # ==========================================================
+
+    def _looks_like_action_command(self, text):
+        """Detecta falas que iniciam uma ação/tarefa (para o contexto de tarefa)."""
+        if not text:
+            return False
+        action_verbs = (
+            "abre", "abrir", "abra", "liga", "ligar", "ative", "ativar",
+            "pesquisa", "pesquisar", "procura", "procurar", "busca", "buscar",
+            "toque", "tocar", "play", "abre o", "executa", "execute", "roda", "rodar",
+        )
+        folded = re.sub(r"\s+", " ", text.lower())
+        return any(re.search(rf"\b{re.escape(verb)}\b", folded) for verb in action_verbs)
 
     # ==========================================================
     # HORA / DATA
@@ -1745,6 +1822,12 @@ class VegaBrain:
                     return authorized
             response = self.commands_parser.parse(normalized)
             self._remember_opened_app_from_command(normalized, response)
+            # Contexto de tarefa: app aberto por comando vira a tarefa atual.
+            if getattr(self, "_last_opened_app", None):
+                try:
+                    self.orchestrator.start_task("open_app", target=self._last_opened_app)
+                except Exception:
+                    pass
             # Ambiente holográfico: o app aberto por voz já nasce SELECIONADO
             # (a interface localiza a janela nova para dar foco a ela).
             callback = getattr(self, "app_opened_callback", None)

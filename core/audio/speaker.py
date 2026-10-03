@@ -12,6 +12,7 @@ import miniaudio
 import numpy as np
 import sounddevice as sd
 from config.environment import load_vega_environment
+from core.orchestration.metrics import SESSION_METRICS
 
 
 class VegaSpeaker:
@@ -206,12 +207,20 @@ class VegaSpeaker:
     # FALAR
     # ==========================================================
 
-    def speak(self, text):
+    def speak(self, text, turn_trace=None):
 
         if not self.is_running:
             return False
 
         if not text:
+            return False
+
+        # Observabilidade: o primeiro chunk do turno marca tts_started.
+        trace = turn_trace
+        if trace is not None:
+            if getattr(self, "turn_trace", None) is None:
+                self.turn_trace = trace
+            trace.mark("tts_started")
             return False
 
         text = self._prepare_text_for_speech(str(text).strip())
@@ -340,6 +349,12 @@ class VegaSpeaker:
         if not audio_data:
             return
 
+        # Marca o primeiro áudio do turno corrente (observabilidade de latência).
+        trace = getattr(self, "turn_trace", None)
+        if trace is not None:
+            trace.mark("first_audio")
+            self.turn_trace = None  # só o primeiro chunk do turno marca
+
         # Tenta decodificar primeiro via miniaudio (suporta mp3, wav, flac, etc.)
         try:
             decoded = miniaudio.decode(audio_data)
@@ -439,6 +454,7 @@ class VegaSpeaker:
             self._generation += 1
             self._speaking = False
 
+        SESSION_METRICS.record(interruptions=1)
         self._speaking_event.clear()
         try:
             sd.stop()
