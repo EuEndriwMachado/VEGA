@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 import json
+import os
 import threading
 
 from core.brain.ai import VegaAI
@@ -72,7 +73,7 @@ class VegaBrain:
         # COMANDOS
         # ======================================================
 
-        self.commands = VegaCommands(ai=self.ai)
+        self.commands = VegaCommands(ai=self.ai, memory=self.memory)
 
         self.commands_parser = VegaCommandsParser(
             self.commands
@@ -410,7 +411,7 @@ class VegaBrain:
     # PROCESSAMENTO NORMAL
     # ==========================================================
 
-    def process(self, text):
+    def process(self, text, image=None):
 
         text = text.strip()
 

@@ -12,11 +12,15 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import quote_plus
 
+from core.actions.music_playlist import PersonalPlaylistService
+
 
 class VegaCommands:
 
-    def __init__(self, ai=None):
+    def __init__(self, ai=None, memory=None):
         self.ai = ai
+        self.memory = memory
+        self.playlists = PersonalPlaylistService(memory=memory)
 
     # ==========================================================
     # UTILIDADES WINDOWS
@@ -550,7 +554,7 @@ class VegaCommands:
             "Get-CimInstance Win32_Process | "
             "Select-Object -ExpandProperty Name | "
             "Where-Object { $_ -and $_.ToString().ToLower() -like '*"
-            f"{safe_name.lower()}*'" 
+            f"{safe_name.lower()}*'"
             " } | Select-Object -Unique"
         )
 
@@ -1496,6 +1500,35 @@ class VegaCommands:
                 return f"Não consegui abrir o Deezer: {error}"
         # YouTube (music) é o padrão — toca sem login.
         return VegaCommands.play_music_youtube(query, playlist=playlist)
+
+    # ==========================================================
+    # PLAYLISTS PESSOAIS
+    # ==========================================================
+
+    def play_personal_playlist(self, name, platform=None):
+        """Toca uma playlist do usuário (guardada por nome ou busca direta)."""
+        return self.playlists.play(name, platform=platform)
+
+    def save_personal_playlist(self, name, platform="youtube", target=""):
+        """Guarda uma playlist pessoal pelo nome falado."""
+        return self.playlists.save(name, platform=platform, target=target)
+
+    def list_personal_playlists(self):
+        """Lista as playlists pessoais guardadas."""
+        entries = self.playlists.list_names()
+        if not entries:
+            return (
+                "Você ainda não tem playlists guardadas. "
+                "Diga 'guarda essa playlist trabalho' para criar uma."
+            )
+
+        lines = ["Suas playlists guardadas:"]
+        for entry in entries:
+            name = str(entry.get("name") or "").strip()
+            platform = str(entry.get("platform") or "youtube").strip()
+            if name:
+                lines.append(f"- {name} ({platform})")
+        return "\n".join(lines)
 
     # ==========================================================
     # FUNK

@@ -165,6 +165,27 @@ class VegaCommandsParser:
             return self.commands.volume_down()
 
         # ======================================================
+        # PLAYLISTS PESSOAIS ("toca minha playlist X")
+        # Vem ANTES da música genérica: "minha playlist" não deve
+        # ser tratada como busca de música qualquer.
+        # ======================================================
+
+        personal_playlist = self._extract_personal_playlist(normalized)
+
+        if personal_playlist is not None:
+            name, platform = personal_playlist
+            return self.commands.play_personal_playlist(name, platform=platform)
+
+        save_playlist = self._extract_save_playlist(normalized)
+
+        if save_playlist is not None:
+            name, platform = save_playlist
+            return self.commands.save_personal_playlist(name, platform=platform)
+
+        if self._extract_list_playlists(normalized):
+            return self.commands.list_personal_playlists()
+
+        # ======================================================
         # MÚDIA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA
         # (antes do play/pause genérico, senão "toca musica X"
         # seria comido pelo "toca musica")
@@ -1137,9 +1158,19 @@ class VegaCommandsParser:
         "manda a música ", "manda musica ", "manda a musica ",
         "toca a playlist ", "tocar a playlist ", "toque a playlist ",
         "toca playlist ", "tocar playlist ", "toque playlist ",
+        "toca a minha playlist ", "tocar a minha playlist ", "toque a minha playlist ",
+        "toca minha playlist ", "tocar minha playlist ", "toque minha playlist ",
+        "toca uma playlist minha ", "tocar uma playlist minha ", "toque uma playlist minha ",
+        "toca as minhas playlists ", "tocar as minhas playlists ", "toque as minhas playlists ",
+        "toca minhas playlists ", "tocar minhas playlists ", "toque minhas playlists ",
+        "toca as minhas musicas ", "tocar as minhas musicas ", "toque as minhas musicas ",
+        "toca minhas musicas ", "tocar minhas musicas ", "toque minhas musicas ",
         "põe a playlist ", "poe a playlist ", "põe playlist ", "poe playlist ",
+        "põe a minha playlist ", "poe a minha playlist ", "põe minha playlist ", "poe minha playlist ",
         "coloca a playlist ", "coloca playlist ", "coloca a playlist ",
+        "coloca a minha playlist ", "coloca minha playlist ",
         "solta a playlist ", "solta playlist ",
+        "solta a minha playlist ", "solta minha playlist ",
         "toca ", "tocar ", "toque ",  # genérico por último
     )
 
@@ -1204,10 +1235,121 @@ class VegaCommandsParser:
                         break
                 # Remove caudas comuns de fala.
                 query = re.sub(r"\s+(por favor|ai|aí|pra mim|para mim)$", "", query).strip()
+                # Remove artigos/preposições iniciais residuais ("de funk" -> "funk", "do alok" -> "alok")
+                query = re.sub(r"^(?:de|da|do|das|dos)\s+", "", query).strip()
                 if query:
                     return (query, platform, playlist)
 
         return None
+
+    # ==========================================================
+    # PLAYLISTS PESSOAIS — "toca minha playlist X"
+    # ==========================================================
+
+    _MY_PLAYLIST_MARKERS = (
+        "minha playlist", "minhas playlists", "a minha playlist",
+        "as minhas playlists",
+    )
+
+    @classmethod
+    def _extract_personal_playlist(cls, text):
+        """Extrai (nome, platform) de um pedido de playlist pessoal.
+
+        Reconhece "toca minha playlist X", "coloca a minha playlist X no
+        spotify" e formas equivalentes. Retorna None quando o pedido é de
+        música normal ("toca a música X") ou não menciona "minha playlist".
+        """
+
+        if not text:
+            return None
+
+        normalized = text.strip()
+        normalized = re.sub(r"^vega\s+", "", normalized)
+
+        if not any(marker in normalized for marker in cls._MY_PLAYLIST_MARKERS):
+            return None
+
+        # Precisa ser um verbo de reprodução.
+        if not any(
+            normalized.startswith(verb)
+            for verb in ("toca", "tocar", "toque", "poe", "põe", "coloca", "colocar", "solta", "abre", "abra")
+        ):
+            return None
+
+        platform = "youtube"
+        for marker in cls._MUSIC_PLATFORMS:
+            if marker in normalized:
+                if "spotify" in marker:
+                    platform = "spotify"
+                elif "deezer" in marker:
+                    platform = "deezer"
+                break
+
+        # Isola o nome que vem depois do marcador "minha playlist".
+        match = re.search(
+            r"(?:minha playlist|minhas playlists)\s+(.+)$",
+            normalized,
+        )
+        if not match:
+            # "toca minha playlist no spotify" sem nome nomeado.
+            return ("", platform)
+
+        name = match.group(1).strip()
+
+        # Remove a plataforma citada no fim: "treino no spotify" -> "treino".
+        for marker in cls._MUSIC_PLATFORMS:
+            if marker in name:
+                name = name.split(marker)[0].strip(" ,.!")
+                break
+
+        name = re.sub(r"\s+(por favor|ai|aí|pra mim|para mim)$", "", name).strip()
+        name = re.sub(r"^(?:de|da|do|das|dos)\s+", "", name).strip()
+        name = re.sub(r"^(?:que|chamada|chamado)\s+", "", name).strip()
+
+        return (name, platform)
+
+    @classmethod
+    def _extract_save_playlist(cls, text):
+        """Extrai (nome, platform) de "guarda essa playlist X"."""
+
+        if not text:
+            return None
+
+        normalized = text.strip()
+        normalized = re.sub(r"^vega\s+", "", normalized)
+
+        match = re.match(
+            r"(?:guarda|guardar|salva|salvar|salve)\s+"
+            r"(?:essa|esta|a)?\s*playlist\s+(.+)$",
+            normalized,
+        )
+        if not match:
+            return None
+
+        name = match.group(1).strip()
+        platform = "youtube"
+        for marker in cls._MUSIC_PLATFORMS:
+            if marker in name:
+                if "spotify" in marker:
+                    platform = "spotify"
+                elif "deezer" in marker:
+                    platform = "deezer"
+                name = name.split(marker)[0].strip(" ,.!")
+                break
+
+        name = re.sub(r"\s+(por favor|ai|aí|pra mim|para mim)$", "", name).strip()
+        return (name, platform) if name else None
+
+    @classmethod
+    def _extract_list_playlists(cls, text):
+        """Reconhece pedidos de listar as playlists guardadas."""
+        if not text:
+            return False
+        normalized = text.strip()
+        return bool(re.search(
+            r"\b(?:quais|liste|listar|mostra|mostre|minhas)\b.*\bplaylists?\b",
+            normalized,
+        ))
 
     # ==========================================================
     # MÍDIA

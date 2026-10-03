@@ -66,6 +66,11 @@ class VegaMemory:
             "errors.json"
         )
 
+        self.playlists_file = os.path.join(
+            self.base_path,
+            "playlists.json"
+        )
+
         self._ensure_files()
 
     # ==========================================================
@@ -86,11 +91,12 @@ class VegaMemory:
             self.preference_file,
             self.procedural_file,
             self.error_file,
+            self.playlists_file,
         ):
             if not os.path.exists(path):
                 self._save_json(
                     path,
-                    [] if path.endswith(".json") and "permanent" not in path else {}
+                    [] if path.endswith(".json") and "permanent" not in path and "playlists" not in path else {}
                 )
 
         if not os.path.exists(self.selective_file):
@@ -633,6 +639,81 @@ class VegaMemory:
         data.append(item)
         self._save_json(self.preference_file, data)
         return item
+
+    # ==========================================================
+    # PLAYLISTS PESSOAIS
+    # ==========================================================
+
+    def save_playlist(self, name, target="", platform="spotify"):
+        """Salva uma playlist pessoal (nome amigável -> URI, URL ou termo).
+
+        `target` é opcional: quando ausente, a reprodução usa o próprio
+        nome como termo de busca na plataforma escolhida.
+        """
+        name = str(name).strip()
+        if not name:
+            return False
+
+        data = self._load_json(self.playlists_file, {})
+        if not isinstance(data, dict):
+            data = {}
+
+        key = self._normalize_key(name)
+        data[key] = {
+            "name": name,
+            "target": str(target).strip(),
+            "platform": str(platform or "spotify").lower().strip(),
+            "updated_at": datetime.now().isoformat(timespec="seconds")
+        }
+        self._save_json(self.playlists_file, data)
+        return True
+
+    def get_playlist(self, name):
+        """Retorna os dados da playlist pelo nome, ou None se não encontrada."""
+        if not name:
+            return None
+        data = self._load_json(self.playlists_file, {})
+        if not isinstance(data, dict):
+            return None
+
+        key = self._normalize_key(name)
+        if key in data:
+            return data[key]
+
+        # Busca aproximada por correspondência parcial
+        for k, entry in data.items():
+            if isinstance(entry, dict):
+                entry_name = self._normalize_key(entry.get("name", k))
+                if key in entry_name or entry_name in key:
+                    return entry
+
+        return None
+
+    def list_playlists(self):
+        """Lista todas as playlists pessoais salvas."""
+        data = self._load_json(self.playlists_file, {})
+        if not isinstance(data, dict):
+            return []
+        return [entry for entry in data.values() if isinstance(entry, dict)]
+
+    def remove_playlist(self, name):
+        """Remove uma playlist pessoal salva."""
+        data = self._load_json(self.playlists_file, {})
+        if not isinstance(data, dict):
+            return False
+        key = self._normalize_key(name)
+        if key in data:
+            del data[key]
+            self._save_json(self.playlists_file, data)
+            return True
+        for k, entry in list(data.items()):
+            if isinstance(entry, dict):
+                entry_name = self._normalize_key(entry.get("name", k))
+                if key in entry_name or entry_name in key:
+                    del data[k]
+                    self._save_json(self.playlists_file, data)
+                    return True
+        return False
 
     def record_procedure(self, task, steps, importance=0.8, confidence=0.8):
         if not task or not steps:
