@@ -165,6 +165,22 @@ class VegaCommandsParser:
             return self.commands.volume_down()
 
         # ======================================================
+        # MÚDIA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA
+        # (antes do play/pause genérico, senão "toca musica X"
+        # seria comido pelo "toca musica")
+        # ======================================================
+
+        music_request = self._extract_music_request(normalized)
+
+        if music_request:
+            query, platform, playlist = music_request
+            return self.commands.play_music(
+                query,
+                platform=platform,
+                playlist=playlist,
+            )
+
+        # ======================================================
         # MÍDIA
         # ======================================================
 
@@ -1106,6 +1122,92 @@ class VegaCommandsParser:
                 "liga o som",
             )
         )
+
+    # ==========================================================
+    # MÚSICA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA
+    # ==========================================================
+
+    _MUSIC_PLAY_PATTERNS = (
+        "toca a música ", "tocar a música ", "toque a música ",
+        "toca musica ", "tocar musica ", "toque musica ",
+        "toca a musica ", "tocar a musica ", "toque a musica ",
+        "põe a música ", "poe a musica ", "põe música ", "poe musica ",
+        "coloca a música ", "coloca musica ", "coloca a musica ",
+        "solta a música ", "solta musica ", "solta a musica ",
+        "manda a música ", "manda musica ", "manda a musica ",
+        "toca a playlist ", "tocar a playlist ", "toque a playlist ",
+        "toca playlist ", "tocar playlist ", "toque playlist ",
+        "põe a playlist ", "poe a playlist ", "põe playlist ", "poe playlist ",
+        "coloca a playlist ", "coloca playlist ", "coloca a playlist ",
+        "solta a playlist ", "solta playlist ",
+        "toca ", "tocar ", "toque ",  # genérico por último
+    )
+
+    _MUSIC_PLATFORMS = (
+        "no spotify", "no youtube", "no yt", "no deezer", "na deezer",
+        "no youtube music", "na youtube music",
+    )
+
+    @classmethod
+    def _extract_music_request(cls, text):
+        """Extrai (query, platform, playlist) de um pedido de música.
+
+        Retorna None quando o texto não é um pedido de tocar música.
+        Ignora pedidos que são de outra natureza (pesquisa, abrir app).
+        """
+
+        if not text:
+            return None
+
+        normalized = text.strip()
+
+        # Tolerância ao wake word: "vega toca a musica X".
+        normalized = re.sub(r"^vega\s+", "", normalized)
+
+        # Não capturar pesquisas e comandos de app:
+        if (
+            "pesquis" in normalized
+            or "procur" in normalized
+            or normalized.startswith("abre")
+            or normalized.startswith("abra")
+            or normalized.startswith("abrir")
+        ):
+            return None
+
+        # Play/pause/skip de mídia genérico não é "tocar música X".
+        if normalized in (
+            "play", "pause", "próxima", "proxima", "toca musica", "tocar musica",
+            "toque musica", "toca a musica", "tocar a musica", "toque a musica",
+            "toca uma musica", "tocar uma musica", "toque uma musica",
+        ):
+            return None
+
+        playlist = "playlist" in normalized
+
+        platform = "youtube"
+        for marker in cls._MUSIC_PLATFORMS:
+            if marker in normalized:
+                if "spotify" in marker:
+                    platform = "spotify"
+                elif "deezer" in marker:
+                    platform = "deezer"
+                break
+
+        # Tenta os padrões mais específicos primeiro (playlist antes de música).
+        for prefix in cls._MUSIC_PLAY_PATTERNS:
+            if normalized.startswith(prefix):
+                query = normalized[len(prefix):].strip()
+                # Remove a menção da plataforma da query: "toca radio ga ga no spotify"
+                for marker in cls._MUSIC_PLATFORMS:
+                    if marker in query:
+                        query = query.split(marker)[0].strip(" ,.!")
+                        break
+                # Remove caudas comuns de fala.
+                query = re.sub(r"\s+(por favor|ai|aí|pra mim|para mim)$", "", query).strip()
+                if query:
+                    return (query, platform, playlist)
+
+        return None
 
     # ==========================================================
     # MÍDIA

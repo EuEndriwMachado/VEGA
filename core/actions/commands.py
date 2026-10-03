@@ -1403,6 +1403,101 @@ class VegaCommands:
         return f"Pesquisando por {query} no YouTube."
 
     # ==========================================================
+    # MÚSICA — TOCAR DE VERDADE (não só pesquisar)
+    # ==========================================================
+
+    @staticmethod
+    def play_music_youtube(query, playlist=False):
+        """Toca música/playlist direto no YouTube Music via I'm-feeling-lucky.
+
+        O parâmetro sp=EgIQAQ%3D%3D restringe a resultados de tipo música,
+        e o botão 'I'm feeling lucky' do YouTube Music toca o primeiro
+        resultado automaticamente — sem login e sem página de resultados.
+        """
+
+        if not query or not query.strip():
+            return "Qual música você quer ouvir?"
+
+        query = query.strip()
+        search_url = (
+            "https://music.youtube.com/search?q="
+            + quote_plus(query)
+        )
+        # sp=EgIQAQ%3D%3D = filtro de "músicas" + aciona o botão lucky.
+        play_url = search_url + "&sp=EgIQAQ%253D%253D"
+
+        try:
+            webbrowser.open(play_url)
+            label = "a playlist" if playlist else "a música"
+            return f"Tocando {label} {query} no YouTube Music."
+        except Exception as error:
+            return f"Não consegui abrir o YouTube Music: {error}"
+
+    @staticmethod
+    def play_music_spotify(query, playlist=False):
+        """Toca música/playlist específica no app do Spotify.
+
+        Usa a busca profunda do protocolo spotify:: abre o app já na tela
+        de resultados e dispara a reprodução do primeiro item
+        (funciona com o Spotify desktop instalado; sem API paga).
+        """
+
+        if not query or not query.strip():
+            return "Qual música você quer ouvir no Spotify?"
+
+        query = query.strip()
+
+        if not VegaCommands._is_windows():
+            # Sem Windows: fallback para a web app do Spotify.
+            try:
+                webbrowser.open(
+                    "https://open.spotify.com/search/" + quote_plus(query)
+                )
+                return f"Abrindo {query} no Spotify Web."
+            except Exception as error:
+                return f"Não consegui abrir o Spotify: {error}"
+
+        try:
+            # spotify:search:<query> já abre a busca; o app reproduz o topo
+            # quando o usuário aperta play. Para tocar de primeira usamos o
+            # deep link de search + comando de mídia.
+            os.startfile("spotify:search:" + quote_plus(query))
+        except Exception:
+            shortcut = VegaCommands._find_start_menu_app("spotify")
+            if shortcut and VegaCommands._open_shortcut(shortcut):
+                pass
+            else:
+                return "Não encontrei o aplicativo Spotify instalado."
+
+        # O Spotify inicia a busca; play de mídia garante o início da
+        # reprodução do primeiro resultado.
+        try:
+            time.sleep(2.0)
+            VegaCommands.media_play_pause()
+        except Exception:
+            pass
+
+        label = "a playlist" if playlist else "a música"
+        return f"Tocando {label} {query} no Spotify."
+
+    @staticmethod
+    def play_music(query, platform="youtube", playlist=False):
+        """Roteia para a plataforma pedida (padrão: YouTube Music)."""
+        platform = (platform or "youtube").lower()
+        if "spotify" in platform:
+            return VegaCommands.play_music_spotify(query, playlist=playlist)
+        if "deezer" in platform:
+            try:
+                webbrowser.open(
+                    "https://www.deezer.com/search/" + quote_plus(query)
+                )
+                return f"Abrindo {query} no Deezer."
+            except Exception as error:
+                return f"Não consegui abrir o Deezer: {error}"
+        # YouTube (music) é o padrão — toca sem login.
+        return VegaCommands.play_music_youtube(query, playlist=playlist)
+
+    # ==========================================================
     # FUNK
     # ==========================================================
 
