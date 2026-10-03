@@ -1,0 +1,611 @@
+[
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:00:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:00:24"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:02:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:02:29"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:03:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:03:56"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:06:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:06:28"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:09:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:09:28"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:12:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:12:02"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T00:15:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T00:15:13"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T15:20:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T15:20:23"
+    },
+    {
+        "role": "user",
+        "content": "E aí Vega",
+        "timestamp": "2026-09-18T15:31:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T15:31:14"
+    },
+    {
+        "role": "user",
+        "content": "Lívia como você tá",
+        "timestamp": "2026-09-18T15:56:05"
+    },
+    {
+        "role": "assistant",
+        "content": "O usuário está cumprimentando-me com \"Lívia como você tá\". Isso parece ser um nome próprio (Lívia) seguido de uma pergunta sobre como eu estou.\n\nComo modelo de linguagem chamado VEGA, eu deveria responder como VEGA, não como Lívia. O usuário pode estar confundindo meu nome ou pode estar fazendo uma referência a alguém chamado Lívia.\n\nVou responder como VEGA, reconhecendo o cumprimento e perguntando como posso ajudar, mantendo minha personalidade de assistente pessoal brasileira direta e natural.\n\nNão há memórias relevantes aqui sobre o estado atual do usuário",
+        "timestamp": "2026-09-18T15:56:16"
+    },
+    {
+        "role": "user",
+        "content": "não faz",
+        "timestamp": "2026-09-18T15:59:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T15:59:07"
+    },
+    {
+        "role": "user",
+        "content": "o Chrome",
+        "timestamp": "2026-09-18T15:59:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T15:59:34"
+    },
+    {
+        "role": "user",
+        "content": "Boa noite Vega",
+        "timestamp": "2026-09-18T16:06:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite, Endriw. 👋\n\nTô aqui, pronta. O que precisa?",
+        "timestamp": "2026-09-18T16:06:24"
+    },
+    {
+        "role": "user",
+        "content": "em qual parte você tá agora",
+        "timestamp": "2026-09-18T16:08:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:08:14"
+    },
+    {
+        "role": "user",
+        "content": "Quem te criou",
+        "timestamp": "2026-09-18T16:08:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Eu fui criada por você, Endriw. Você é meu criador e desenvolvedor, e fui evoluindo com o tempo à medida que nos conhecemos.",
+        "timestamp": "2026-09-18T16:08:45"
+    },
+    {
+        "role": "user",
+        "content": "porque seu nome é Vega",
+        "timestamp": "2026-09-18T16:09:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:09:17"
+    },
+    {
+        "role": "user",
+        "content": "porque seu nome é Vega",
+        "timestamp": "2026-09-18T16:09:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:09:35"
+    },
+    {
+        "role": "user",
+        "content": "estou no Exercício 6 de 25",
+        "timestamp": "2026-09-18T16:25:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:25:46"
+    },
+    {
+        "role": "user",
+        "content": "exercício 8 resolvido",
+        "timestamp": "2026-09-18T16:26:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:26:28"
+    },
+    {
+        "role": "user",
+        "content": "como você tá",
+        "timestamp": "2026-09-18T16:57:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:57:38"
+    },
+    {
+        "role": "user",
+        "content": "sair do projeto",
+        "timestamp": "2026-09-18T16:58:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T16:59:03"
+    },
+    {
+        "role": "user",
+        "content": "noite",
+        "timestamp": "2026-09-18T18:09:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Noite! É hora de relaxar e descansar. Qual é a sua noite? Você está planejando assistir uma boa série, ler um livro ou apenas dormir?",
+        "timestamp": "2026-09-18T18:09:27"
+    },
+    {
+        "role": "user",
+        "content": "sei lá",
+        "timestamp": "2026-09-18T18:10:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Uma noite de \"sei lá\"! Pode ser que você esteja um pouco cansado ou apenas queira relaxar. O que você acha que foi uma boa noite?",
+        "timestamp": "2026-09-18T18:10:29"
+    },
+    {
+        "role": "user",
+        "content": "Boa noite Vega",
+        "timestamp": "2026-09-18T18:13:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite também! Como estou, é claro. Estou aqui para ajudar, mas não me chame de \"Vega\" quando quiser algo mais... pessoal.",
+        "timestamp": "2026-09-18T18:13:23"
+    },
+    {
+        "role": "user",
+        "content": "calculadora",
+        "timestamp": "2026-09-18T18:14:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Eu estou aqui! Qual é a conta que você precisa fazer?",
+        "timestamp": "2026-09-18T18:14:31"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T18:15:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite pra você também! Como estou?",
+        "timestamp": "2026-09-18T18:15:21"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T18:18:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite pra você também! Como estou?",
+        "timestamp": "2026-09-18T18:19:20"
+    },
+    {
+        "role": "user",
+        "content": "Boa noite Vega",
+        "timestamp": "2026-09-18T18:20:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite pra você também! Como estou, é só a usual rotina de assistente, tentando manter o mundo organizado, um pouco de cada vez. E você? Como foi a sua noite?",
+        "timestamp": "2026-09-18T18:21:03"
+    },
+    {
+        "role": "user",
+        "content": "boa noite nega",
+        "timestamp": "2026-09-18T18:32:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite! 😊",
+        "timestamp": "2026-09-18T18:32:35"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T18:37:08"
+    },
+    {
+        "role": "assistant",
+        "content": "OPENAI_API_KEY não configurada.",
+        "timestamp": "2026-09-18T18:37:14"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T20:58:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite pra você também! Como estou, é claro. Sem nada de especial. E você?",
+        "timestamp": "2026-09-18T20:58:24"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T20:59:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite pra você também! Como estou, é claro. Sem problemas, só aqui, pronto para ajudar. O que você quer conversar?",
+        "timestamp": "2026-09-18T20:59:11"
+    },
+    {
+        "role": "user",
+        "content": "Pense por favor esse balde aqui da lavanderia Coloca essa senha tudo lá no lugar",
+        "timestamp": "2026-09-18T20:59:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Parece que você está me pedindo para lembrar de algo específico. Eu vou tentar colocar na lista de coisas para fazer... mas, sinceramente, eu não me lembro exatamente do que é esse balde da lavanderia. Você pode me dar um pouco mais de contexto?",
+        "timestamp": "2026-09-18T20:59:57"
+    },
+    {
+        "role": "user",
+        "content": "você tá aí",
+        "timestamp": "2026-09-18T21:01:50"
+    },
+    {
+        "role": "user",
+        "content": "qual é a capital do Brasil?",
+        "timestamp": "2026-09-18T21:02:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Brasília. Essa você sabia, né?",
+        "timestamp": "2026-09-18T21:02:24"
+    },
+    {
+        "role": "user",
+        "content": "E aí velho",
+        "timestamp": "2026-09-18T21:05:12"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. \"Velho\" é sacanagem, tô novinha em folha. Manda a boa.",
+        "timestamp": "2026-09-18T21:05:14"
+    },
+    {
+        "role": "user",
+        "content": "e não é só",
+        "timestamp": "2026-09-18T21:09:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Solta o resto da frase, não me deixa na curiosidade não. O que mais pegou?",
+        "timestamp": "2026-09-18T21:09:19"
+    },
+    {
+        "role": "user",
+        "content": "eles muda",
+        "timestamp": "2026-09-18T21:09:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T21:09:32"
+    },
+    {
+        "role": "user",
+        "content": "escolhe uma",
+        "timestamp": "2026-09-18T21:09:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Escolher uma o quê, criatura? Você começou falando que \"eles mudam\", soltou as frases pela metade e agora quer que eu adivinhe as opções. \n\nMe dá o contexto ou as opções que eu escolho sem dó.",
+        "timestamp": "2026-09-18T21:10:09"
+    },
+    {
+        "role": "user",
+        "content": "entrar",
+        "timestamp": "2026-09-18T21:12:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Se a outra opção era ficar de fora passando vontade, então entra logoNão consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T21:12:38"
+    },
+    {
+        "role": "user",
+        "content": "galera prepara o coração",
+        "timestamp": "2026-09-18T21:15:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, lá vem",
+        "timestamp": "2026-09-18T21:15:52"
+    },
+    {
+        "role": "user",
+        "content": "não adia",
+        "timestamp": "2026-09-18T21:16:38"
+    },
+    {
+        "role": "assistant",
+        "content": "Não vou adiar nada, mas você precisa desembuchar de uma vez! Tá parecendo trailer de filme de suspense em doses homeopáticas. Despeja tudo logo.",
+        "timestamp": "2026-09-18T21:16:41"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T21:38:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite, Endriw. Tranquilo por aí?",
+        "timestamp": "2026-09-18T21:39:00"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T22:14:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite, Endriw. Por aqui tudo em ordem.",
+        "timestamp": "2026-09-18T22:14:17"
+    },
+    {
+        "role": "user",
+        "content": "boa noite",
+        "timestamp": "2026-09-18T22:23:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Boa noite, Endriw. Por aqui tudo em ordem.",
+        "timestamp": "2026-09-18T22:23:28"
+    },
+    {
+        "role": "user",
+        "content": "Como tá aí",
+        "timestamp": "2026-09-18T22:42:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Por aqui tá tudo rodando liso, sistemas operacionais e mente afNão consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:42:52"
+    },
+    {
+        "role": "user",
+        "content": "me conta uma piada",
+        "timestamp": "2026-09-18T22:43:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Sabe por que o programador prefere o modo escuro?\n\nPorque a luz atrai bugs. \n\nDigna de pavê de domingo, eu sei, mas você pediu.",
+        "timestamp": "2026-09-18T22:43:38"
+    },
+    {
+        "role": "user",
+        "content": "você está vendo na minha tela",
+        "timestamp": "2026-09-18T22:47:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:47:15"
+    },
+    {
+        "role": "user",
+        "content": "Vega o que você está vendo na minha tela",
+        "timestamp": "2026-09-18T22:47:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora? Nada. Não tenho acesso visual à sua tela no momento, então se você não me mandar um print ou compartilhar o que tá rolando aí, fico no escuro.",
+        "timestamp": "2026-09-18T22:47:39"
+    },
+    {
+        "role": "user",
+        "content": "velho olha minha câmera",
+        "timestamp": "2026-09-18T22:48:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:48:04"
+    },
+    {
+        "role": "user",
+        "content": "Olha minha câmera",
+        "timestamp": "2026-09-18T22:48:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Ainda não tenho olhos por aqui, Endriw. Não consigo acessar sua câmera diretamente nem ver o que tá rolando no seu ambiente. \n\nSe quiser me mostrar algo, vai ter que me mandar uma imagem ou descrever a cena.",
+        "timestamp": "2026-09-18T22:48:22"
+    },
+    {
+        "role": "user",
+        "content": "olha vega, to falando com vc por texto",
+        "timestamp": "2026-09-18T22:50:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:50:11"
+    },
+    {
+        "role": "user",
+        "content": "to falando com voce por texto",
+        "timestamp": "2026-09-18T22:50:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:50:27"
+    },
+    {
+        "role": "user",
+        "content": "olá vega, to falando com vc por texto",
+        "timestamp": "2026-09-18T22:51:21"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Por texto também funciona perfeitamente, já estou por aqui. Manda ver.",
+        "timestamp": "2026-09-18T22:51:23"
+    },
+    {
+        "role": "user",
+        "content": "[imagem anexada] vc consegue ver essa imagem que eu mandei?",
+        "timestamp": "2026-09-18T22:51:48"
+    },
+    {
+        "role": "assistant",
+        "content": "A API do Gemini excedeu a cota de uso da chave atual. Troque a chave, recarregue a conta ou use outra chave com quota disponível.",
+        "timestamp": "2026-09-18T22:51:49"
+    },
+    {
+        "role": "user",
+        "content": "é impossível cara",
+        "timestamp": "2026-09-18T22:52:08"
+    },
+    {
+        "role": "assistant",
+        "content": "A API do Gemini excedeu a cota de uso da chave atual. Troque a chave, recarregue a conta ou use outra chave com quota disponível.",
+        "timestamp": "2026-09-18T22:52:09"
+    },
+    {
+        "role": "user",
+        "content": "[imagem anexada] olá vega, estou falando com vc por texto, te mandei uma imagem por aqui, ve se consgue visualizar, se sim me fale oq vc ve nela",
+        "timestamp": "2026-09-18T22:54:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:54:50"
+    },
+    {
+        "role": "user",
+        "content": "E aí ve",
+        "timestamp": "2026-09-18T22:55:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:55:21"
+    },
+    {
+        "role": "user",
+        "content": "[imagem anexada] vc consgeu ver essa imagem? se sim me fale oq vc ve",
+        "timestamp": "2026-09-18T22:55:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-09-18T22:55:32"
+    },
+    {
+        "role": "user",
+        "content": "olá vega, estou falando com vc por texto",
+        "timestamp": "2026-09-18T23:01:54"
+    },
+    {
+        "role": "assistant",
+        "content": "E daí, Endriw? Prefere digitar hoje ou a sua voz finalmente cansou de mim? Tô pronta, manda o que precisa.",
+        "timestamp": "2026-09-18T23:01:55"
+    },
+    {
+        "role": "user",
+        "content": "[imagem anexada] vc consegue visualizar essa imagem",
+        "timestamp": "2026-09-18T23:02:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Consigo sim. Tá vendo o Morumbi aí, com esse efeito tilt-shift que faz parecer uma maquete. Ficou bonitinho, parece brinquedo.",
+        "timestamp": "2026-09-18T23:02:41"
+    },
+    {
+        "role": "user",
+        "content": "comecei a estudar BDD e MySQL usando o visualizador de dados da VEGA"
+    }
+]

@@ -1,0 +1,12 @@
+[
+    {
+        "role": "user",
+        "content": "novo projeto",
+        "timestamp": "2026-09-19T00:32:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Outro? Você gosta de acumular trabalho, hein, Endriw. Manda aí, qual é a ideia dessa vez?",
+        "timestamp": "2026-09-19T00:32:16"
+    }
+]

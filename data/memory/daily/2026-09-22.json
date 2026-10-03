@@ -1,0 +1,12 @@
+[
+    {
+        "role": "user",
+        "content": "Olá embr",
+        "timestamp": "2026-09-22T19:57:10"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Embr\"? Economizou no teclado foi, Endriw? \n\nFala logo o que manda.",
+        "timestamp": "2026-09-22T19:57:11"
+    }
+]

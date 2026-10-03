@@ -1,0 +1,1 @@
+"""Authentication and sensitive-action protections."""

@@ -1,0 +1,347 @@
+[
+    {
+        "role": "user",
+        "content": "Quem te criou",
+        "timestamp": "2026-09-14T21:04:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Endriw! 🚀 Eu sou a VEGA, criada por ele para ser sua assistente pessoal brasileira. O que você quer hoje? 😊",
+        "timestamp": "2026-09-14T21:04:48"
+    },
+    {
+        "role": "user",
+        "content": "Por que o seu nome é Vega",
+        "timestamp": "2026-09-14T21:05:07"
+    },
+    {
+        "role": "assistant",
+        "content": "O nome Vega vem da constelação de Lira e do árabe *an-nasr al-wāqi*, traduzido como \"a águia que cai\". Mas, se você quiser uma explicação mais direta: é uma estrela brilhante! 🌟",
+        "timestamp": "2026-09-14T21:05:13"
+    },
+    {
+        "role": "user",
+        "content": "O que você sabe sobre o seu criador",
+        "timestamp": "2026-09-14T21:05:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Endriw! 👋 Como posso ajudar hoje? 😊",
+        "timestamp": "2026-09-14T21:05:49"
+    },
+    {
+        "role": "user",
+        "content": "Vega O que você sabe sobre o Andrew",
+        "timestamp": "2026-09-14T21:06:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Eu não tenho acesso a informações pessoais ou biográficas sobre \"Andrew\", nem sobre pessoas em geral. Minha memória interna está apenas com os fatos que você me forneceu, e nada disso se refere a uma pessoa chamada Andrew. 😊",
+        "timestamp": "2026-09-14T21:06:07"
+    },
+    {
+        "role": "user",
+        "content": "Ô nega como você tá",
+        "timestamp": "2026-09-14T21:34:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o que é isso? Você está se referindo a uma situação que não sei. Se quiser que eu te ajude, diga o que está acontecendo.",
+        "timestamp": "2026-09-14T21:35:01"
+    },
+    {
+        "role": "user",
+        "content": "eu tô perguntando se você tá bem",
+        "timestamp": "2026-09-14T21:35:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o que é isso? Você está se referindo a mim? Eu sou uma IA, não tenho sentimentos. Se quiser que eu te ajude, diga o que precisa.",
+        "timestamp": "2026-09-14T21:35:19"
+    },
+    {
+        "role": "user",
+        "content": "conte uma piada",
+        "timestamp": "2026-09-14T21:35:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o que é isso? Você quer uma piada? Vou te contar uma: Por que a galinha não entende o português? Porque ela não sabe fazer o \"pau\"! 😄",
+        "timestamp": "2026-09-14T21:35:46"
+    },
+    {
+        "role": "user",
+        "content": "VW vs code",
+        "timestamp": "2026-09-14T21:37:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o que é isso? Você está se referindo a uma discussão entre dois programas? Vou te contar uma piada: O VW Code é um editor de código, e o VS Code é outro, mas o VW Code é mais legal! 😄",
+        "timestamp": "2026-09-14T21:37:31"
+    },
+    {
+        "role": "user",
+        "content": "Bom dia velha",
+        "timestamp": "2026-09-14T21:46:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Bom dia nada,",
+        "timestamp": "2026-09-14T21:46:45"
+    },
+    {
+        "role": "user",
+        "content": "Por que bom dia nada",
+        "timestamp": "2026-09-14T21:46:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Context:**",
+        "timestamp": "2026-09-14T21:46:55"
+    },
+    {
+        "role": "user",
+        "content": "Que hora que é agora",
+        "timestamp": "2026-09-14T21:47:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Mem",
+        "timestamp": "2026-09-14T21:47:07"
+    },
+    {
+        "role": "user",
+        "content": "Que dia que é hoje",
+        "timestamp": "2026-09-14T21:47:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje é dia",
+        "timestamp": "2026-09-14T21:47:28"
+    },
+    {
+        "role": "user",
+        "content": "Bom dia velha",
+        "timestamp": "2026-09-14T21:53:18"
+    },
+    {
+        "role": "assistant",
+        "content": "creator/main",
+        "timestamp": "2026-09-14T21:53:24"
+    },
+    {
+        "role": "user",
+        "content": "que que você tá fazendo",
+        "timestamp": "2026-09-14T21:53:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Bom",
+        "timestamp": "2026-09-14T21:53:38"
+    },
+    {
+        "role": "user",
+        "content": "o que vamos fazer hoje",
+        "timestamp": "2026-09-14T21:54:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje é você",
+        "timestamp": "2026-09-14T21:54:38"
+    },
+    {
+        "role": "user",
+        "content": "E aí Vega",
+        "timestamp": "2026-09-14T21:57:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Fala, End",
+        "timestamp": "2026-09-14T21:57:59"
+    },
+    {
+        "role": "user",
+        "content": "Ô Vega o que você é",
+        "timestamp": "2026-09-14T21:58:46"
+    },
+    {
+        "role": "user",
+        "content": "Ô Vega Quem te criou",
+        "timestamp": "2026-09-14T21:59:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Foi você, né, Endriw! Esqueceu quem me colocou no mundo? \n\nVocê me criou e me deu esse nome inspirado na estrela Vega — lá da constelação de Lira, que vem do árabe e significa \"a águia que cai\". Bonito, vai!",
+        "timestamp": "2026-09-14T21:59:44"
+    },
+    {
+        "role": "user",
+        "content": "até que é bonito mas para quê que eu te criei",
+        "timestamp": "2026-09-14T22:00:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Ué, tá",
+        "timestamp": "2026-09-14T22:00:24"
+    },
+    {
+        "role": "user",
+        "content": "o que você lembra sobre Andrew Machado",
+        "timestamp": "2026-09-14T22:00:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Você quis",
+        "timestamp": "2026-09-14T22:00:55"
+    },
+    {
+        "role": "user",
+        "content": "ué, tá",
+        "timestamp": "2026-09-14T22:01:39"
+    },
+    {
+        "role": "assistant",
+        "content": "casual/relaxed",
+        "timestamp": "2026-09-14T22:01:42"
+    },
+    {
+        "role": "user",
+        "content": "fecha o Spotify",
+        "timestamp": "2026-09-14T22:01:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Goal:** Respond to",
+        "timestamp": "2026-09-14T22:01:56"
+    },
+    {
+        "role": "user",
+        "content": "fecha o Spotify",
+        "timestamp": "2026-09-14T22:02:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Erro no Gemini: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\\nPlease retry in 47.465831729s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.6-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '47s'}]}}",
+        "timestamp": "2026-09-14T22:02:05"
+    },
+    {
+        "role": "user",
+        "content": "ué, tá",
+        "timestamp": "2026-09-14T22:04:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Erro no Gemini: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\\nPlease retry in 21.615518255s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '21s'}]}}",
+        "timestamp": "2026-09-14T22:04:31"
+    },
+    {
+        "role": "user",
+        "content": "Boa noite velha",
+        "timestamp": "2026-09-14T22:05:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Erro no Gemini: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\\nPlease retry in 20.097705894s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.6-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '20s'}]}}",
+        "timestamp": "2026-09-14T22:05:33"
+    },
+    {
+        "role": "user",
+        "content": "asdf",
+        "timestamp": "2026-09-14T22:23:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o que é isso? Um caractere inválido. Vamos lá, o que você quer que eu faça hoje? 😊",
+        "timestamp": "2026-09-14T22:23:06"
+    },
+    {
+        "role": "user",
+        "content": "como vai",
+        "timestamp": "2026-09-14T22:23:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Como vai? Estou aqui para te ajudar! 😊",
+        "timestamp": "2026-09-14T22:23:10"
+    },
+    {
+        "role": "user",
+        "content": "qual o seu nome",
+        "timestamp": "2026-09-14T22:23:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Eu sou Endriw, o meu nome vem da estrela Vega, que é uma das mais brilhantes do céu. 🌟",
+        "timestamp": "2026-09-14T22:23:15"
+    },
+    {
+        "role": "user",
+        "content": "td",
+        "timestamp": "2026-09-14T22:23:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá, td? Vou te ajudar. O que você precisa? 😊",
+        "timestamp": "2026-09-14T22:23:36"
+    },
+    {
+        "role": "user",
+        "content": "ok",
+        "timestamp": "2026-09-14T22:23:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Okay, ok! Vamos lá. O que você quer que eu faça hoje? 😊",
+        "timestamp": "2026-09-14T22:23:38"
+    },
+    {
+        "role": "user",
+        "content": "como vai",
+        "timestamp": "2026-09-14T22:23:38"
+    },
+    {
+        "role": "assistant",
+        "content": "Como vai? Estou aqui para te ajudar! 😊",
+        "timestamp": "2026-09-14T22:23:41"
+    },
+    {
+        "role": "user",
+        "content": "qual o seu nome",
+        "timestamp": "2026-09-14T22:23:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Eu sou Endriw. O nome vem da estrela Vega, que é uma das mais brilhantes do céu. 🌟",
+        "timestamp": "2026-09-14T22:23:45"
+    },
+    {
+        "role": "user",
+        "content": "como vai",
+        "timestamp": "2026-09-14T22:24:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Vai bem, né? Estou aqui para te ajudar. Se precisar de algo, só fala. 😊",
+        "timestamp": "2026-09-14T22:24:13"
+    },
+    {
+        "role": "user",
+        "content": "qual o seu nome",
+        "timestamp": "2026-09-14T22:24:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Sou Endriw. Meu nome é Endriw Machado, e eu sou a VEGA. Vai como vai? 😊",
+        "timestamp": "2026-09-14T22:24:16"
+    },
+    {
+        "role": "user",
+        "content": "O que significa de",
+        "timestamp": "2026-09-14T23:10:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, o \"de\" aqui é um pouco confuso. Se você quer saber o significado de algo, pode me dizer o que está sendo perguntado. Eu aqui para ajudar! 😊",
+        "timestamp": "2026-09-14T23:11:01"
+    }
+]

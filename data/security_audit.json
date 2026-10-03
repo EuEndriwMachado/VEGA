@@ -1,0 +1,82 @@
+[
+  {
+    "timestamp": "2026-09-20T23:09:21+00:00",
+    "action": "apague o arquivo garfo",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": true,
+    "evidence_path": "data\\security_evidence\\command_20260920T230921Z.jpg",
+    "authorized": true
+  },
+  {
+    "timestamp": "2026-09-20T23:17:09+00:00",
+    "action": "apaga o arquivo chamado garfo",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": true,
+    "evidence_path": "data\\security_evidence\\command_20260920T231709Z.jpg",
+    "authorized": true
+  },
+  {
+    "timestamp": "2026-09-20T23:54:04+00:00",
+    "action": "esvaziar a lixeira",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": false,
+    "evidence_path": "data\\security_evidence\\command_20260920T235403Z.jpg",
+    "authorized": false
+  },
+  {
+    "timestamp": "2026-09-20T23:55:00+00:00",
+    "action": "esvaziar a lixeira",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": true,
+    "evidence_path": "data\\security_evidence\\command_20260920T235500Z.jpg",
+    "authorized": true
+  },
+  {
+    "timestamp": "2026-09-21T00:08:28+00:00",
+    "action": "apagar arquivo c:\\users\\endriw machado\\videos\\portas abertas.py",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": true,
+    "evidence_path": "data\\security_evidence\\command_20260921T000828Z.jpg",
+    "authorized": true
+  },
+  {
+    "timestamp": "2026-09-21T00:16:29+00:00",
+    "action": "apagar arquivo c:\\users\\endriw machado\\music\\windows11 turbo 23h2 10.10.2023.iso",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": true,
+    "evidence_path": "data\\security_evidence\\command_20260921T001629Z.jpg",
+    "authorized": true
+  },
+  {
+    "timestamp": "2026-09-21T02:46:08+00:00",
+    "action": "dangerous_action",
+    "confirmed": true,
+    "pin_valid": false,
+    "face_supported": true,
+    "face_valid": null,
+    "evidence_path": "C:\\VEGA\\data\\security_evidence\\command_20260921T024608Z.jpg",
+    "authorized": false
+  },
+  {
+    "timestamp": "2026-09-21T03:38:14+00:00",
+    "action": "dangerous_action",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": true,
+    "face_valid": false,
+    "evidence_path": "C:\\VEGA\\data\\security_evidence\\command_20260921T033814Z.jpg",
+    "authorized": false
+  }
+]

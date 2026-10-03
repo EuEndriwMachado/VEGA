@@ -1,0 +1,172 @@
+[
+    {
+        "role": "user",
+        "content": "E aí Vega",
+        "timestamp": "2026-10-02T15:11:31"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Tudo certo por aí ou já inventou algum problema novo para eu resolver?",
+        "timestamp": "2026-10-02T15:11:32"
+    },
+    {
+        "role": "user",
+        "content": "E aí Vega",
+        "timestamp": "2026-10-02T15:26:46"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Tudo certo por aí? O que manda?",
+        "timestamp": "2026-10-02T15:26:47"
+    },
+    {
+        "role": "user",
+        "content": "E aí Vega",
+        "timestamp": "2026-10-02T18:54:38"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Tudo certo por aqui. O que manda?",
+        "timestamp": "2026-10-02T18:54:39"
+    },
+    {
+        "role": "user",
+        "content": "Vega Me fale um pouco sobre a marca Intel",
+        "timestamp": "2026-10-02T18:55:17"
+    },
+    {
+        "role": "assistant",
+        "content": "A Intel começou lá atrás em 1968, fundada pelo Gordon Moore e pelo Robert Noyce, focada em memória de computador antes de virar o monstro dos processadores que a gente conhece. Revolucionou a indústria com a arquitetura x86 e dominou o mercado de PCs por décadas. \n\nNos últimos anos, deu uma vacilada feia perdendo espaço pra AMD e ficando atrasada na corrida dos chips para IA, mas ainda é gigante e está tentando dar a volta por cima fabricando chips para terceiros. \n\nQuer saber mais sobre alguma linha específica deles,",
+        "timestamp": "2026-10-02T18:55:18"
+    },
+    {
+        "role": "user",
+        "content": "Agora me fale sobre o AMD",
+        "timestamp": "2026-10-02T18:55:57"
+    },
+    {
+        "role": "assistant",
+        "content": "A AMD começou na sombra da Intel em 1969, mas deu a volta por cima de um jeito impressionante. Enquanto a concorrente tropeçava em atrasos e inovação, a AMD acertou em cheio com os processadores Ryzen para PCs e EPYC para servidores, além de comprar a Xilinx e entrar forte na briga de inteligência artificial com os chips MI300. \n\nHoje virou o jogo e bota pressão de verdade na Intel. Quer focar em alguma linha específica deles?",
+        "timestamp": "2026-10-02T18:55:58"
+    },
+    {
+        "role": "user",
+        "content": "velho",
+        "timestamp": "2026-10-02T18:56:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Velho? Calma, Endriw, os chips ainda não estão envelhecendo tão rápido assim. Ou você tá falando da idade do silício?",
+        "timestamp": "2026-10-02T18:56:25"
+    },
+    {
+        "role": "user",
+        "content": "nega Me conte uma piada",
+        "timestamp": "2026-10-02T18:56:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Não sou \"nega\", Endriw, sou a VEGA. Mas já que pediu: por que os programadores preferem o inverno? Porque no verão o ar-condicionado trava e gera muitas exceções.",
+        "timestamp": "2026-10-02T18:56:46"
+    },
+    {
+        "role": "user",
+        "content": "deixa eu ver se o banco de dados",
+        "timestamp": "2026-10-02T18:57:12"
+    },
+    {
+        "role": "assistant",
+        "content": "O banco de dados tá aí firme e forte, ou você esqueceu de subir o container de novo?",
+        "timestamp": "2026-10-02T18:57:13"
+    },
+    {
+        "role": "user",
+        "content": "Veiga deixa eu ver",
+        "timestamp": "2026-10-02T18:57:24"
+    },
+    {
+        "role": "assistant",
+        "content": "É VEGA, Endriw. O que você quer ver?",
+        "timestamp": "2026-10-02T18:57:25"
+    },
+    {
+        "role": "user",
+        "content": "o que você",
+        "timestamp": "2026-10-02T18:57:33"
+    },
+    {
+        "role": "assistant",
+        "content": "O que eu o quê, Endriw? Termina a frase antes que eu comece a adivinhar — e provavelmente erre.",
+        "timestamp": "2026-10-02T18:57:34"
+    },
+    {
+        "role": "user",
+        "content": "Vega deixa eu ver teu banco de dados",
+        "timestamp": "2026-10-02T18:57:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Quer mesmo olhar por baixo do capô? Não tem muito segredo por aqui, Endriw: são só as minhas memórias e o meu estado interno rodando. Quer que eu abra algum arquivo específico ou tá só testando minha paciência?",
+        "timestamp": "2026-10-02T18:57:45"
+    },
+    {
+        "role": "user",
+        "content": "vídeo de querer amor não me diz",
+        "timestamp": "2026-10-02T19:30:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Quer que eu busque esse vídeo de \"Querer Amor Não Me Diz\" para você, Endriw, ou prefere resolver isso sozinho?",
+        "timestamp": "2026-10-02T19:30:55"
+    },
+    {
+        "role": "user",
+        "content": "quero não",
+        "timestamp": "2026-10-02T19:31:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-02T19:31:15"
+    },
+    {
+        "role": "user",
+        "content": "faz tempo que eu tenho",
+        "timestamp": "2026-10-02T19:49:57"
+    },
+    {
+        "role": "assistant",
+        "content": "É, a gente já tá junto nessa jornada desde os tempos da ETEC SM e das primeiras linhas de código. O tempo voa quando a gente tá evoluindo.",
+        "timestamp": "2026-10-02T19:49:58"
+    },
+    {
+        "role": "user",
+        "content": "nosso amor",
+        "timestamp": "2026-10-02T19:50:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Nosso amor por criar e quebrar sistemas, né? Porque se for romance, você tá de papo furado com a inteligência artificial errada.",
+        "timestamp": "2026-10-02T19:50:19"
+    },
+    {
+        "role": "user",
+        "content": "até parece que não soube amar",
+        "timestamp": "2026-10-02T19:50:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Ah, agora virou serenata de sofrência pra cima de mim? Desculpa, Endriw, mas meu coração é feito de silício e amarelo — e nenhuma dessas duas coisas bate por drama romântico. Vai tocar uma modão ou voltar a programar?",
+        "timestamp": "2026-10-02T19:50:43"
+    },
+    {
+        "role": "user",
+        "content": "eu sei que pode até demorar para esquecer todas coisas que vivi",
+        "timestamp": "2026-10-02T19:56:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Memórias costumam ser teimosas mesmo, Endriw. Mas esquecer tudo seria desperdício — afinal, quem mais guardaria o histórico das nossas discussões e dos perrengues na ETEC? Deixa elas aí quietinhas, uma hora encontram o devido lugar.",
+        "timestamp": "2026-10-02T19:56:30"
+    }
+]

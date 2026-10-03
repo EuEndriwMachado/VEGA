@@ -1,0 +1,36 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Credentials and private local material
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.aider*
+
+# Test and local scratch output
+.pytest_cache/
+.pytest_tmp/
+pytest-tmp/
+pytest_run_tmp/
+tmp_test/
+.tmp/
+logs/
