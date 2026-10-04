@@ -88,6 +88,11 @@ class VegaBrain:
         self._pending_close_app = None
         self.scheduler = VegaScheduler(on_due=self._on_scheduled_item)
 
+        # Segurança do controle do celular: exige PIN + rosto uma vez por
+        # sessão, e revoga quando o aparelho é desconectado.
+        from core.connectivity.security_gate import PhoneAccessGuard
+        self.phone_guard = PhoneAccessGuard(self.security)
+
     def _on_scheduled_item(self, item):
         self.memory.add_daily_message("system", f"Lembrete: {item.get('text', '')}")
         callback = getattr(self, "scheduler_notification_callback", None)
@@ -1429,6 +1434,80 @@ class VegaBrain:
         plan = "\n".join(f"{index}. {step}" for index, step in enumerate(steps, 1))
         return f"Sessão de foco iniciada por {duration} minutos: {goal}.\n{plan}"
 
+    def _is_phone_control_request(self, text):
+        """Detecta comandos que CONTROLAM o celular (exigem autenticação).
+
+        Print do celular é leitura da tela, mas ainda expõe o aparelho —
+        também exige autorização. Já 'quais dispositivos' é só consulta.
+        """
+        if not text:
+            return False
+        if not any(word in text for word in ("celular", "telefone", "smartphone", "android")):
+            return False
+
+        # Consultas que não operam o aparelho.
+        if any(phrase in text for phrase in (
+            "quais dispositivos", "meus dispositivos", "dispositivos conectados",
+        )):
+            return False
+
+        control_markers = (
+            "abre", "abrir", "abra", "executa", "pausa", "pular", "pula",
+            "próxima", "proxima", "tira", "print", "espelha", "espelhar",
+            "manda", "envia", "passa", "reconecta", "conecta", "pareia",
+            "bateria", "liga", "desliga", "fecha", "instala",
+        )
+        return any(marker in text for marker in control_markers)
+
+    def _check_phone_access(self, text):
+        """Verifica a autorização do controle do celular.
+
+        Retorna None quando já autorizado (o fluxo normal continua);
+        caso contrário, devolve a mensagem de desafio e guarda a ação
+        pendente para quando o PIN for informado.
+        """
+        guard = getattr(self, "phone_guard", None)
+        if guard is None:
+            # Brain construído fora do __init__ (testes/embutido): cria agora.
+            try:
+                from core.connectivity.security_gate import PhoneAccessGuard
+                guard = PhoneAccessGuard(self.security)
+                self.phone_guard = guard
+            except Exception:
+                return None
+
+        try:
+            serial = self._current_phone_serial()
+        except Exception:
+            serial = ""
+
+        if guard.is_granted(serial):
+            return None
+
+        guard.set_pending(text, device_serial=serial)
+        return guard.challenge_message()
+
+    def _current_phone_serial(self):
+        """Serial do celular conectado (para detectar troca de aparelho)."""
+        try:
+            from core.connectivity import PhoneConnector
+            connector = PhoneConnector()
+            devices = connector.connected_devices() if hasattr(connector, "connected_devices") else []
+            if devices:
+                return devices[0]
+            from core.connectivity.wireless import WirelessADB
+            wireless = WirelessADB()
+            found = wireless.connected_devices()
+            return found[0] if found else ""
+        except Exception:
+            return ""
+
+    def revoke_phone_access(self):
+        """Revoga a autorização (usar quando o celular desconectar)."""
+        guard = getattr(self, "phone_guard", None)
+        if guard is not None:
+            guard.revoke()
+
     def _process_security_request(self, text):
         normalized = normalize_text(text)
         credential = re.search(r"\b(?:pin|senha|senhas|password|credenciais)\b|security\.(?:json|py)", normalized)
@@ -1821,6 +1900,33 @@ class VegaBrain:
                 authorized = self._authorize_pending_action(normalized, pin_match.group(1))
                 if authorized is not None:
                     return authorized
+
+            # ==================================================
+            # SEGURANÇA DO CONTROLE DO CELULAR
+            # ==================================================
+            # Comandos que operam o celular exigem autenticação (PIN +
+            # rosto) uma vez por sessão. Exceção: o print do celular, que
+            # é somente leitura da tela.
+            if self._is_phone_control_request(normalized):
+                guard_response = self._check_phone_access(normalized)
+                if guard_response is not None:
+                    return guard_response
+            # Se há uma autenticação de celular pendente e o usuário
+            # acabou de dizer o PIN, conclui a autorização.
+            guard = getattr(self, "phone_guard", None)
+            if guard is not None and guard.has_pending():
+                pin_match = self._extract_security_pin(normalized)
+                if pin_match:
+                    granted, message = self.phone_guard.authenticate(pin_match.group(1))
+                    if not granted:
+                        self.phone_guard.set_pending(
+                            self.phone_guard.take_pending() or {}
+                        )
+                        return message
+                    pending = self.phone_guard.take_pending() or {}
+                    self.phone_guard.grant(pending.get("device_serial", ""))
+                    return f"{message} Pode repetir o comando do celular."
+
             response = self.commands_parser.parse(normalized)
             self._remember_opened_app_from_command(normalized, response)
             # Contexto de tarefa: app aberto por comando vira a tarefa atual.

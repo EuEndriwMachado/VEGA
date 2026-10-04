@@ -1629,6 +1629,17 @@ class VegaCommands:
         return result.message or ("Pareado." if result.ok else "Não consegui parear.")
 
     # ==========================================================
+    # CAPTURA DE TELA DO PC
+    # ==========================================================
+
+    @staticmethod
+    def screenshot_pc(show=True):
+        """Tira um print da tela do PC e mostra na hora."""
+        from core.actions.screenshot import capture_screen
+        result = capture_screen(show=show)
+        return result.get("message") or "Não consegui capturar a tela."
+
+    # ==========================================================
     # MODOS
     # ==========================================================
 

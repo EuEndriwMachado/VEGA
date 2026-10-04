@@ -14,5 +14,18 @@
       "ip": "192.168.15.4"
     },
     "last_seen": "2026-10-03T21:41:34"
+  },
+  "celular 192 168 15 4": {
+    "name": "Celular 192.168.15.4",
+    "kind": "phone",
+    "address": "192.168.15.4",
+    "connector": "phone",
+    "aliases": [
+      "192.168.15.4"
+    ],
+    "metadata": {
+      "wireless": true
+    },
+    "last_seen": "2026-10-03T21:58:56"
   }
 }

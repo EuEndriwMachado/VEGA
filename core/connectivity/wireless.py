@@ -176,6 +176,19 @@ class WirelessADB:
 
         combined = f"{output} {error}".lower()
         if ok and "connected to" in combined:
+            # Guarda a porta efetiva para reconexões futuras.
+            if self.registry is not None:
+                host = target.split(":")[0]
+                device = self.registry.find(host, kind="phone")
+                if device is not None:
+                    device.metadata["wireless"] = True
+                    device.metadata["port"] = int(target.split(":")[-1])
+                    self.registry.remember(
+                        device.name, kind="phone", address=host,
+                        connector="phone",
+                        aliases=list(device.aliases) + [host],
+                        **device.metadata,
+                    )
             return True, f"Conectado ao celular em {target}."
         if "already connected" in combined:
             return True, f"O celular em {target} já estava conectado."
@@ -239,11 +252,18 @@ class WirelessADB:
     def reconnect_known(self) -> list:
         """Tenta reconectar os celulares sem fio já conhecidos.
 
+        Estratégia em ordem: usa a porta salva, tenta o mDNS (descobre
+        automaticamente) e, por fim, a porta padrão 5555.
         Retorna a lista de mensagens de resultado (para log/voz).
         """
         messages = []
         if self.registry is None:
             return messages
+
+        # 1. Tenta primeiro via mDNS: é o caminho mais confiável no
+        #    Android 11+, porque a porta muda a cada reconexão.
+        if self.connect_via_mdns():
+            messages.append("Celular reconectado sem fio.")
 
         for device in self.registry.by_kind("phone"):
             if not device.metadata.get("wireless"):
@@ -251,9 +271,51 @@ class WirelessADB:
             host = device.address
             if not host or ":" in host:
                 continue
-            ok, message = self.connect(host)
+
+            # Já conectou via mDNS? Não repete.
+            if self._is_connected(host):
+                continue
+
+            port = int(device.metadata.get("port") or 5555)
+            ok, message = self.connect(host, port)
+            if not ok and port != 5555:
+                ok, message = self.connect(host, 5555)
             messages.append(message if ok else f"{device.name}: {message}")
         return messages
+
+    def _is_connected(self, host) -> bool:
+        """Confere se o host já aparece como conectado no adb."""
+        for device in self.connected_devices():
+            if device == host or device.startswith(f"{host}:"):
+                return True
+        return False
+
+    def connect_via_mdns(self) -> bool:
+        """Conecta usando o mDNS do ADB (descobre o serviço automaticamente).
+
+        No Android 11+, `adb mdns services` lista o serviço TLS já pareado,
+        e a conexão por ele dispensa informar IP e porta.
+        """
+        adb = self.adb()
+        if not adb:
+            return False
+
+        ok, output, _error = self._run([adb, "mdns", "services"], timeout=12)
+        if not ok or not output:
+            return False
+
+        for line in output.splitlines():
+            # Formato: "adb-<serial>-<id> _adb-tls-connect._tcp <ip>:<porta>"
+            if "_adb-tls-connect" not in line:
+                continue
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            service = parts[0]
+            ok2, _out2, _err2 = self._run([adb, "connect", service], timeout=12)
+            if ok2:
+                return True
+        return False
 
     @staticmethod
     def is_same_network(host, timeout=1.5) -> bool:

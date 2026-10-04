@@ -42,6 +42,7 @@ class PhoneConnector(Connector):
         self._adb_path = None
         self._kdeconnect_path = None
         self._scrcpy_path = None
+        self._mirror_process = None
         self.apps = AppDictionary()
         super().__init__(registry=registry, runner=runner)
 
@@ -183,6 +184,7 @@ class PhoneConnector(Connector):
             "send_file": self._action_send_file,
             "pull_file": self._action_pull_file,
             "mirror": self._action_mirror,
+            "stop_mirror": self._action_stop_mirror,
             "media_pause": self._action_media_pause,
             "media_play": self._action_media_play,
             "media_next": self._action_media_next,
@@ -351,7 +353,12 @@ class PhoneConnector(Connector):
                         return True
         return False
 
-    def _action_screenshot(self, device=None, **_kwargs) -> ConnectorResult:
+    def _action_stop_mirror(self, **_kwargs) -> ConnectorResult:
+        if self.stop_mirror():
+            return ConnectorResult.success("Parei o espelhamento.")
+        return ConnectorResult.failure("Não há espelhamento aberto para parar.")
+
+    def _action_screenshot(self, device=None, show=True, **_kwargs) -> ConnectorResult:
         serial = self._resolve_serial(device)
         if not serial:
             return ConnectorResult.failure("Nenhum celular conectado.")
@@ -370,10 +377,27 @@ class PhoneConnector(Connector):
         if not ok or not os.path.exists(local):
             return ConnectorResult.failure("Não consegui transferir o print do celular.")
 
-        return ConnectorResult.success(
-            "Capturei a tela do celular.",
-            data={"path": local},
+        # Mostra o print no PC automaticamente (o visualizador padrão abre).
+        shown = False
+        if show:
+            shown = self._open_on_pc(local)
+
+        message = "Capturei a tela do celular" + (
+            " e abri o print aqui." if shown else "."
         )
+        return ConnectorResult.success(
+            message,
+            data={"path": os.path.abspath(local), "shown": shown},
+        )
+
+    @staticmethod
+    def _open_on_pc(path) -> bool:
+        """Abre um arquivo local com o visualizador padrão do Windows."""
+        try:
+            os.startfile(os.path.abspath(path))  # type: ignore[attr-defined]
+            return True
+        except (OSError, AttributeError):
+            return False
 
     def _action_send_file(self, path="", device=None, **_kwargs) -> ConnectorResult:
         path = str(path or "").strip()
@@ -411,7 +435,43 @@ class PhoneConnector(Connector):
             )
         return ConnectorResult.failure(f"Não consegui trazer {remote} do celular.")
 
-    def _action_mirror(self, device=None, **_kwargs) -> ConnectorResult:
+    # Perfis de espelhamento: equilibram fluidez x qualidade.
+    MIRROR_PROFILES = {
+        # Modo padrão: fluido, bom para uso geral e Wi-Fi.
+        "balanced": [
+            "--max-size", "1024",       # reduz a resolução enviada
+            "--max-fps", "30",          # limita a taxa de quadros
+            "--video-bit-rate", "4M",   # bitrate adequado sem saturar Wi-Fi
+            "--audio-bit-rate", "96K",
+            "--buffer-time", "50",      # menos latência de buffer
+        ],
+        # Modo rápido: máxima fluidez, qualidade menor.
+        "fast": [
+            "",
+            "--max-fps", "30",
+            "--video-bit-rate", "2M",
+            "--audio-bit-rate", "64K",
+            "--buffer-time", "35",
+            "--video-codec", "h264",
+        ],
+        # Modo qualidade: imagem melhor, exige rede boa.
+        "quality": [
+            "--max-size", "1600",
+            "--max-fps", "60",
+            "--video-bit-rate", "8M",
+            "--buffer-time", "80",
+        ],
+        # Modo sem áudio: para quem quer só a tela (mais leve ainda).
+        "silent": [
+            "--max-size", "1024",
+            "--max-fps", "30",
+            "--video-bit-rate", "4M",
+            "--no-audio",
+            "--buffer-time", "50",
+        ],
+    }
+
+    def _action_mirror(self, device=None, profile="balanced", **_kwargs) -> ConnectorResult:
         serial = self._resolve_serial(device)
         if not serial:
             return ConnectorResult.failure("Nenhum celular conectado.")
@@ -423,14 +483,40 @@ class PhoneConnector(Connector):
                 "(github.com/Genymobile/scrcpy)."
             )
 
+        # Um espelhamento por vez: evita duas janelas brigando pelo aparelho.
+        if self._mirror_process is not None and self._mirror_process.poll() is None:
+            return ConnectorResult.success("O espelhamento já está aberto.")
+
+        options = self.MIRROR_PROFILES.get(
+            str(profile or "balanced").lower(),
+            self.MIRROR_PROFILES["balanced"],
+        )
+
+        command = [scrcpy, "-s", serial, *options]
+
         try:
-            subprocess.Popen(
-                [scrcpy, "-s", serial],
+            self._mirror_process = subprocess.Popen(
+                command,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except OSError as error:
+            self._mirror_process = None
             return ConnectorResult.failure(f"Não consegui iniciar o espelhamento: {error}")
+
         return ConnectorResult.success("Espelhando a tela do celular.")
+
+    def stop_mirror(self) -> bool:
+        """Encerra o espelhamento em andamento, se houver."""
+        process = self._mirror_process
+        if process is None or process.poll() is not None:
+            self._mirror_process = None
+            return False
+        try:
+            process.terminate()
+        except OSError:
+            return False
+        self._mirror_process = None
+        return True
 
     def _find_scrcpy(self) -> str:
         """Procura o scrcpy no PATH e no local padrão de instalação da VEGA."""

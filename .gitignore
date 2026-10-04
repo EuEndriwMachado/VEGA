@@ -34,3 +34,7 @@ pytest_run_tmp/
 tmp_test/
 .tmp/
 logs/
+
+# Capturas geradas em tempo de execucao (print de tela do PC/celular)
+Uploads/pc/
+Uploads/phone/

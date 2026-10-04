@@ -300,6 +300,12 @@ class VegaCommandsParser:
             action, kwargs = connectivity
             if action == "__discover__":
                 return self.commands.discover_devices()
+            if action == "__pc_screenshot__":
+                return self.commands.screenshot_pc()
+            if action == "__phone_screenshot__":
+                return self.commands.connectivity_action(
+                    "screenshot", text=normalized, kind="phone",
+                )
             return self.commands.connectivity_action(action, text=normalized, **kwargs)
 
         # ======================================================
@@ -1163,15 +1169,64 @@ class VegaCommandsParser:
 
     _PHONE_WORDS = ("celular", "telefone", "smartphone", "android", "meu phone")
     _TV_WORDS = ("tv", "televisao", "televisor", "chromecast")
+    # Palavras que apontam para o PC explicitamente.
+    _PC_WORDS = ("computador", "pc", "desktop", "monitor", "meu pc", "no pc")
+
+    # Frases que pedem captura de tela (mesma intenção para PC e celular).
+    _SCREENSHOT_PHRASES = (
+        "tira um print", "tira print", "tira um print da tela",
+        "tira print da tela", "print da tela", "screenshot",
+        "captura a tela", "capturar a tela", "tira uma foto da tela",
+        "print",  # cobre "print do celular" e "print do pc"
+    )
+
+    # Frases que pedem espelhamento (celular) ou mostrar a tela.
+    # "parar" é verificado ANTES, para não casar com "espelhar".
+    _STOP_MIRROR_PHRASES = (
+        "para de espelhar", "para o espelhamento", "parar o espelhamento",
+        "fecha a tela do celular", "fecha o espelhamento",
+        "encerra o espelhamento", "encerrar o espelhamento",
+    )
+    _MIRROR_PHRASES = (
+        "espelha", "espelhar", "espelhamento", "mirror",
+        "me mostra a tela", "mostra a tela", "mostre a tela",
+        "exibe a tela", "exibir a tela", "quero ver a tela",
+        "me mostra o celular", "mostra o celular",
+    )
 
     @classmethod
     def _mentions_device(cls, text):
-        """Retorna ('phone'|'tv'|'') conforme o dispositivo citado."""
+        """Retorna ('phone'|'tv'|'pc'|'') conforme o dispositivo citado.
+
+        O PC só é reconhecido quando citado EXPLICITAMENTE. Isso garante
+        que "abre o instagram" (sem menção) siga para o PC, e
+        "abre o instagram no celular" vá para o celular — sem ambiguidade.
+        """
         if any(word in text for word in cls._PHONE_WORDS):
             return "phone"
         if any(word in text for word in cls._TV_WORDS):
             return "tv"
+        if any(word in text for word in cls._PC_WORDS):
+            return "pc"
         return ""
+
+    @classmethod
+    def _resolve_screenshot_request(cls, text):
+        """Decide se um pedido de print é do PC ou do celular.
+
+        Regra:
+          - menciona celular/telefone  -> print do celular;
+          - menciona computador/pc     -> print do PC;
+          - sem menção                 -> print do PC (comportamento padrão).
+        """
+        if not any(phrase in text for phrase in cls._SCREENSHOT_PHRASES):
+            return None
+
+        device = cls._mentions_device(text)
+        if device == "phone":
+            return ("__phone_screenshot__", {})
+        # PC ou sem menção explícita: print do computador.
+        return ("__pc_screenshot__", {})
 
     @classmethod
     def _resolve_connectivity_request(cls, text):
@@ -1184,6 +1239,11 @@ class VegaCommandsParser:
 
         if not text:
             return None
+
+        # Print: PC ou celular? Resolvido antes de tudo, para não confundir.
+        screenshot = cls._resolve_screenshot_request(text)
+        if screenshot is not None:
+            return screenshot
 
         device = cls._mentions_device(text)
 
@@ -1198,10 +1258,10 @@ class VegaCommandsParser:
                 return ("battery", {})
 
             if device == "phone":
-                if any(phrase in text for phrase in ("tira um print", "tira print",
-                                                     "print da tela", "screenshot")):
-                    return ("screenshot", {})
-                if any(phrase in text for phrase in ("espelha", "espelhar", "mirror")):
+                # "parar" precisa vir antes: "para de espelhar" contém "espelhar".
+                if any(phrase in text for phrase in cls._STOP_MIRROR_PHRASES):
+                    return ("stop_mirror", {})
+                if any(phrase in text for phrase in cls._MIRROR_PHRASES):
                     return ("mirror", {})
                 if any(phrase in text for phrase in ("sem fio", "sem cabo", "wifi", "wi-fi",
                                                      "pelo wi-fi", "pelo wifi")):

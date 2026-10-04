@@ -47,7 +47,9 @@ class Device:
         key = _normalize_key(query)
         if not key:
             return False
-        candidates = [self.name] + list(self.aliases)
+        # O endereço (IP/serial) também identifica o dispositivo: sem isso,
+        # buscar por IP não encontraria um aparelho salvo pelo nome.
+        candidates = [self.name, self.address] + list(self.aliases)
         for candidate in candidates:
             normalized = _normalize_key(candidate)
             if not normalized:
