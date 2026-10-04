@@ -1203,6 +1203,15 @@ class VegaCommandsParser:
                     return ("screenshot", {})
                 if any(phrase in text for phrase in ("espelha", "espelhar", "mirror")):
                     return ("mirror", {})
+                if any(phrase in text for phrase in ("sem fio", "sem cabo", "wifi", "wi-fi",
+                                                     "pelo wi-fi", "pelo wifi")):
+                    if any(word in text for word in ("reconecta", "reconectar", "conecta de novo")):
+                        return ("reconnect", {})
+                    if any(word in text for word in ("ativa", "ativar", "liga", "ligar", "habilita")):
+                        return ("enable_wireless", {})
+                    return ("reconnect", {})
+                if any(word in text for word in ("reconecta", "reconectar")):
+                    return ("reconnect", {})
                 if "pausa" in text or "pause" in text:
                     return ("media_pause", {})
                 if "próxima" in text or "proxima" in text or "pula" in text:

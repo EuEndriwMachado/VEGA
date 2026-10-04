@@ -40,7 +40,9 @@ class ConnectivityManager:
     """Fachada dos conectores de dispositivo da VEGA."""
 
     def __init__(self, registry=None, connectors=None):
-        self.registry = registry or DeviceRegistry()
+        # Atenção: usar `is None` (e não `or`), porque DeviceRegistry define
+        # __len__ — um registro vazio é falsy e seria substituído por um novo.
+        self.registry = registry if registry is not None else DeviceRegistry()
         if connectors is not None:
             self.connectors = {connector.name: connector for connector in connectors}
         else:

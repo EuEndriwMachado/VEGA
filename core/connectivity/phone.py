@@ -16,10 +16,12 @@ em vez de falhar. Todas as ações retornam `ConnectorResult`.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import time
 
+from core.connectivity.apps import AppDictionary
 from core.connectivity.base import Connector, ConnectorResult, ConnectorStatus
 
 
@@ -39,6 +41,8 @@ class PhoneConnector(Connector):
     def __init__(self, registry=None, runner=None):
         self._adb_path = None
         self._kdeconnect_path = None
+        self._scrcpy_path = None
+        self.apps = AppDictionary()
         super().__init__(registry=registry, runner=runner)
 
     # ==========================================================
@@ -182,6 +186,10 @@ class PhoneConnector(Connector):
             "media_pause": self._action_media_pause,
             "media_play": self._action_media_play,
             "media_next": self._action_media_next,
+            "pair_wireless": self._action_pair_wireless,
+            "connect_wireless": self._action_connect_wireless,
+            "enable_wireless": self._action_enable_wireless,
+            "reconnect": self._action_reconnect,
         }
 
     def validate(self, action: str, **kwargs) -> str:
@@ -210,12 +218,27 @@ class PhoneConnector(Connector):
                 continue
             serial = parts[0]
             model = self._device_prop(serial, "ro.product.model") or "Celular"
+
+            # Guarda o IP Wi-Fi quando disponível: é o endereço que permite
+            # reconectar sem cabo depois. O serial fica como apelido.
+            ip = ""
+            ok_ip, route, _err = self._adb("shell", "ip", "route", serial=serial)
+            if ok_ip:
+                match = re.search(r"src\s+(\d{1,3}(?:\.\d{1,3}){3})", route)
+                if match:
+                    ip = match.group(1)
+
+            address = ip or serial
+            aliases = [serial, model]
+            if ip:
+                aliases.append(ip)
+
             if self.registry is not None:
                 self.registry.remember(
-                    model, kind="phone", address=serial, connector="phone",
-                    aliases=[serial],
+                    model, kind="phone", address=address, connector="phone",
+                    aliases=aliases, serial=serial, ip=ip,
                 )
-            found.append({"name": model, "address": serial, "kind": "phone"})
+            found.append({"name": model, "address": address, "kind": "phone"})
         return found
 
     def _device_prop(self, serial, prop) -> str:
@@ -271,27 +294,62 @@ class PhoneConnector(Connector):
         if not serial:
             return ConnectorResult.failure("Nenhum celular conectado.")
 
-        # 1. Tenta por pacote direto (monkey abre o launcher padrão).
-        ok, output, error = self._adb(
-            "shell", "monkey", "-p", app, "-c",
+        # Traduz o nome falado ("instagram") para o pacote Android.
+        package = self.apps.resolve(app)
+        if not package:
+            return ConnectorResult.failure(
+                f"Não conheço o aplicativo {app}. Diga o nome do pacote "
+                "(ex.: com.instagram.android) ou me ensine: diga 'guarda o app "
+                f"{app} como <pacote>'."
+            )
+
+        label = self.apps.label(app)
+
+        # Testa os candidatos (pacote padrão + variantes de fabricante) até
+        # encontrar um realmente instalado no aparelho.
+        candidates = self.apps.candidates(app) or [package]
+        for candidate in candidates:
+            if not self._is_installed(candidate, serial):
+                continue
+            if self._launch_package(candidate, serial):
+                return ConnectorResult.success(f"Abrindo {label} no celular.")
+
+        return ConnectorResult.failure(
+            f"Não encontrei {label} instalado neste celular."
+        )
+
+    def _is_installed(self, package, serial) -> bool:
+        """Confirma que o pacote existe no aparelho."""
+        ok, output, _error = self._adb(
+            "shell", "pm", "list", "packages", package, serial=serial,
+        )
+        return ok and f"package:{package}" in output
+
+    def _launch_package(self, package, serial) -> bool:
+        """Tenta abrir o pacote por dois caminhos (monkey e resolve-activity)."""
+        # 1. monkey abre o launcher padrão do pacote.
+        ok, output, _error = self._adb(
+            "shell", "monkey", "-p", package, "-c",
             "android.intent.category.LAUNCHER", "1", serial=serial,
         )
         if ok and "No activities found" not in output:
-            return ConnectorResult.success(f"Abrindo {app} no celular.")
+            return True
 
-        # 2. Fallback: abre por intent genérico.
-        ok, _output, _error = self._adb(
-            "shell", "am", "start", "-a",
-            "android.intent.action.MAIN", "-c",
-            "android.intent.category.LAUNCHER", serial=serial,
+        # 2. Resolve o componente do launcher e abre direto.
+        ok, output, _error = self._adb(
+            "shell", "cmd", "package", "resolve-activity", "--brief",
+            package, serial=serial,
         )
         if ok:
-            return ConnectorResult.success(f"Tentei abrir {app} no celular.")
-
-        return ConnectorResult.failure(
-            f"Não encontrei o aplicativo {app} no celular. "
-            "Diga o nome do pacote (ex.: com.instagram.android)."
-        )
+            for line in output.splitlines():
+                line = line.strip()
+                if "/" in line and "." in line:
+                    ok2, _out, _err = self._adb(
+                        "shell", "am", "start", "-n", line, serial=serial,
+                    )
+                    if ok2:
+                        return True
+        return False
 
     def _action_screenshot(self, device=None, **_kwargs) -> ConnectorResult:
         serial = self._resolve_serial(device)
@@ -358,7 +416,7 @@ class PhoneConnector(Connector):
         if not serial:
             return ConnectorResult.failure("Nenhum celular conectado.")
 
-        scrcpy = shutil.which("scrcpy")
+        scrcpy = self._find_scrcpy()
         if not scrcpy:
             return ConnectorResult.failure(
                 "Para espelhar a tela do celular, instale o scrcpy "
@@ -366,10 +424,78 @@ class PhoneConnector(Connector):
             )
 
         try:
-            subprocess.Popen([scrcpy, "-s", serial])
+            subprocess.Popen(
+                [scrcpy, "-s", serial],
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
         except OSError as error:
             return ConnectorResult.failure(f"Não consegui iniciar o espelhamento: {error}")
         return ConnectorResult.success("Espelhando a tela do celular.")
+
+    def _find_scrcpy(self) -> str:
+        """Procura o scrcpy no PATH e no local padrão de instalação da VEGA."""
+        if self._scrcpy_path:
+            return self._scrcpy_path
+
+        found = shutil.which("scrcpy")
+        if found:
+            self._scrcpy_path = found
+            return found
+
+        candidates = [
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "scrcpy", "scrcpy.exe"),
+            os.path.join(os.environ.get("USERPROFILE", ""), "Downloads", "scrcpy", "scrcpy.exe"),
+        ]
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                self._scrcpy_path = candidate
+                return candidate
+        return ""
+
+    # ----------------------------------------------------------
+    # Sem fio (ADB over Wi-Fi)
+    # ----------------------------------------------------------
+
+    def _wireless(self):
+        """Instância de WirelessADB compartilhando adb/registro."""
+        from core.connectivity.wireless import WirelessADB
+        return WirelessADB(
+            adb_path=self._find_adb(),
+            registry=self.registry,
+            runner=self._runner,
+        )
+
+    def _action_pair_wireless(self, address="", code="", **_kwargs) -> ConnectorResult:
+        ok, message = self._wireless().pair(address, code)
+        return ConnectorResult(ok=ok, message=message)
+
+    def _action_connect_wireless(self, address="", port=5555, **_kwargs) -> ConnectorResult:
+        ok, message = self._wireless().connect(address, port)
+        return ConnectorResult(ok=ok, message=message)
+
+    def _action_enable_wireless(self, port=5555, **_kwargs) -> ConnectorResult:
+        """Ativa o modo sem fio usando o cabo uma única vez."""
+        wireless = self._wireless()
+        ok, message = wireless.enable_tcpip(port)
+        if not ok:
+            return ConnectorResult.failure(message)
+
+        ip = wireless.current_ip()
+        if not ip:
+            return ConnectorResult.success(
+                f"{message} Agora conecte por Wi-Fi com 'adb connect <ip>:{port}'."
+            )
+        ok, connect_message = wireless.connect(ip, port)
+        return ConnectorResult(ok=ok, message=f"{message} {connect_message}")
+
+    def _action_reconnect(self, **_kwargs) -> ConnectorResult:
+        """Reconecta celulares sem fio já pareados."""
+        messages = self._wireless().reconnect_known()
+        if not messages:
+            return ConnectorResult.failure(
+                "Não tenho nenhum celular sem fio salvo para reconectar."
+            )
+        return ConnectorResult.success(" ".join(messages))
 
     # ----------------------------------------------------------
     # Controle de mídia do celular

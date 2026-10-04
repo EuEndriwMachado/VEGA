@@ -1618,6 +1618,16 @@ class VegaCommands:
         """Atalho: ações na TV."""
         return self.connectivity_action(action, text=text, kind="tv", **kwargs)
 
+    def pair_phone_wireless(self, address, code):
+        """Pareia o celular sem fio com o código de 6 dígitos do aparelho."""
+        manager = self.connectivity()
+        if not manager:
+            return "A camada de conectividade não está disponível agora."
+        result = manager.route(
+            "pair_wireless", kind="phone", address=address, code=code,
+        )
+        return result.message or ("Pareado." if result.ok else "Não consegui parear.")
+
     # ==========================================================
     # MODOS
     # ==========================================================

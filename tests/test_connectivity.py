@@ -301,9 +301,28 @@ class TestPhoneConnector:
             lambda name: "/usr/bin/adb" if name == "adb" else None,
         )
         connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
+        # Isola o teste do scrcpy realmente instalado na máquina.
+        monkeypatch.setattr(connector, "_find_scrcpy", lambda: "")
         result = connector.execute("mirror")
         assert not result.ok
         assert "scrcpy" in result.message.lower()
+
+    def test_mirror_com_scrcpy_inicia(self, monkeypatch, registry):
+        responses = {"devices": (True, "List of devices attached\nABC\tdevice\n", "")}
+        monkeypatch.setattr(
+            "core.connectivity.phone.shutil.which",
+            lambda name: "/usr/bin/adb" if name == "adb" else None,
+        )
+        started = {}
+        monkeypatch.setattr(
+            "core.connectivity.phone.subprocess.Popen",
+            lambda args, **kwargs: started.setdefault("args", args),
+        )
+        connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
+        monkeypatch.setattr(connector, "_find_scrcpy", lambda: "/usr/bin/scrcpy")
+        result = connector.execute("mirror")
+        assert result.ok
+        assert "/usr/bin/scrcpy" in started["args"]
 
     def test_controle_de_midia(self, monkeypatch, registry):
         responses = {

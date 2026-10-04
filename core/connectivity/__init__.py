@@ -20,6 +20,8 @@ from core.connectivity.registry import DeviceRegistry, Device
 from core.connectivity.base import Connector, ConnectorStatus
 from core.connectivity.phone import PhoneConnector
 from core.connectivity.tv import TVConnector
+from core.connectivity.wireless import WirelessADB
+from core.connectivity.apps import AppDictionary
 from core.connectivity.manager import ConnectivityManager
 
 __all__ = [
@@ -29,5 +31,7 @@ __all__ = [
     "ConnectorStatus",
     "PhoneConnector",
     "TVConnector",
+    "WirelessADB",
+    "AppDictionary",
     "ConnectivityManager",
 ]

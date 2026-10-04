@@ -1,0 +1,18 @@
+{
+  "23129ra5fl": {
+    "name": "23129RA5FL",
+    "kind": "phone",
+    "address": "192.168.15.4",
+    "connector": "phone",
+    "aliases": [
+      "222a6388",
+      "23129RA5FL",
+      "192.168.15.4"
+    ],
+    "metadata": {
+      "serial": "222a6388",
+      "ip": "192.168.15.4"
+    },
+    "last_seen": "2026-10-03T21:41:34"
+  }
+}
