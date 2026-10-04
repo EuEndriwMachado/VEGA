@@ -197,15 +197,15 @@ class TestIntegracao:
         assert no_open["target"] == "spotify:playlist:WORK"
         assert "trabalho" in played
 
-    def test_salvar_reporta_falha_de_memoria(self, monkeypatch, no_open):
+    def test_salvar_reporta_falha_de_memoria(self):
         """Se a memória falhar, o usuário precisa saber (não fingir sucesso)."""
         broken = VegaCommands(memory=None)
         response = broken.save_personal_playlist("teste")
         assert "não consigo" in response.lower() or "nao consigo" in response.lower()
 
-    def test_memoria_que_retorna_false_e_reportada(self, no_open):
+    def test_memoria_que_retorna_false_e_reportada(self):
         class RejectingMemory:
-            def save_playlist(self, *args, **kwargs):
+            def save_playlist(self, *_args, **_kwargs):
                 return False
 
         service = PersonalPlaylistService(memory=RejectingMemory())
@@ -216,9 +216,30 @@ class TestIntegracao:
         response = commands.list_personal_playlists()
         assert "guarda essa playlist" in response.lower()
 
-    def test_playlist_pessoal_nao_vira_musica_generica(self, parser, no_open):
-        """'toca minha playlist X' não deve cair no fluxo de música comum."""
-        parser.parse("toca minha playlist foco")
-        # O fluxo de música usa music.youtube.com/search; o de playlist
-        # pessoal (sem URI salvo) usa a mesma base, mas o rótulo é de playlist.
+    def test_playlist_pessoal_nao_salva_ensina_a_guardar(self, parser, no_open):
+        """'toca minha playlist X' passa pelo fluxo pessoal, não pelo genérico.
+
+        A URL é a mesma busca de fallback por design; o que distingue os
+        fluxos é a mensagem: o fluxo pessoal avisa que a playlist não está
+        guardada e ensina o comando para fixar.
+        """
+        response = parser.parse("toca minha playlist foco")
+        assert "ainda não tenho" in response.lower() or "ainda nao tenho" in response.lower()
+        assert "guarda essa playlist" in response.lower()
         assert "music.youtube.com" in no_open.get("url", "")
+
+    def test_playlist_por_nome_nao_ensina_a_guardar(self, parser, no_open):
+        """'toca a playlist X' é busca comum: não menciona guardar.
+
+        A fixture no_open é usada por efeito colateral (impede abrir o
+        navegador de verdade); não é referenciada no corpo do teste.
+        """
+        response = parser.parse("toca a playlist academia")
+        assert "guarda essa playlist" not in response.lower()
+        assert "Tocando a playlist" in response
+
+    def test_musica_normal_nao_menciona_playlist_pessoal(self, parser, no_open):
+        """'toca a musica X' não deve ser capturado pelo fluxo de playlist."""
+        response = parser.parse("toca a musica radio ga ga")
+        assert "Tocando a música" in response
+        assert "minha playlist" not in response.lower()
