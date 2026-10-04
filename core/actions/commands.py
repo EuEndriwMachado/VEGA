@@ -1583,6 +1583,13 @@ class VegaCommands:
         if not manager:
             return "A camada de conectividade não está disponível agora."
         result = manager.route(action, text=text, **kwargs)
+        # Resultados com imagem (print do celular) vão para o painel da VEGA.
+        if result.ok and isinstance(result.data, dict) and result.data.get("path"):
+            if callable(getattr(self, "_result_callback", None)):
+                try:
+                    self._result_callback("screenshot", result.data)
+                except Exception:
+                    pass
         return result.message or ("Feito." if result.ok else "Não consegui fazer isso.")
 
     def list_devices(self):
@@ -1632,11 +1639,15 @@ class VegaCommands:
     # CAPTURA DE TELA DO PC
     # ==========================================================
 
-    @staticmethod
-    def screenshot_pc(show=True):
+    def screenshot_pc(self, show=True):
         """Tira um print da tela do PC e mostra na hora."""
         from core.actions.screenshot import capture_screen
         result = capture_screen(show=show)
+        if result.get("ok") and callable(getattr(self, "_result_callback", None)):
+            try:
+                self._result_callback("screenshot", result)
+            except Exception:
+                pass
         return result.get("message") or "Não consegui capturar a tela."
 
     # ==========================================================

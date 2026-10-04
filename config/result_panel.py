@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import re
 from html import escape
 from urllib.parse import urlparse
@@ -28,6 +29,7 @@ class VegaResultPanel(QFrame):
         "geocoding": "Localização",
         "dictionary": "Definição",
         "page_snapshot": "Página monitorada",
+        "screenshot": "Captura de tela",
     }
     _MAX_IMAGE_BYTES = 4 * 1024 * 1024
 
@@ -255,6 +257,24 @@ class VegaResultPanel(QFrame):
         self.image_label.hide()
         if not isinstance(result, dict):
             return
+
+        # Caminho de arquivo local (prints do PC/celular salvos em disco).
+        path = result.get("path") or result.get("image_path")
+        if isinstance(path, str) and path and os.path.exists(path):
+            if path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".webp")):
+                pixmap = QPixmap(path)
+                if not pixmap.isNull():
+                    self.image_label.setPixmap(
+                        pixmap.scaled(
+                            340,
+                            180,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+                    self.image_label.show()
+                    return
+
         mime = str(result.get("mimeType", result.get("mime_type", "")))
         encoded = result.get("image_base64", result.get("data"))
         if not mime.startswith("image/") or not isinstance(encoded, str):

@@ -290,10 +290,19 @@ class TestIntegracaoBrain:
         assert response is not None
         assert "pin" in response.lower()
 
-    def test_troca_de_aparelho_revoga_autorizacao(self, brain):
+    def test_troca_de_aparelho_revoga_autorizacao(self, brain, monkeypatch):
         """Autorizado para um celular, outro aparelho exige nova autenticação."""
+        # Fixa o aparelho atual para o teste ser determinístico
+        # (sem depender de haver um celular conectado na máquina).
+        monkeypatch.setattr(brain, "_current_phone_serial", lambda: "CELULAR_B")
         brain.phone_guard.grant("APARELHO_ANTIGO")
         response = brain._check_phone_access("pausa a musica no celular")
         # O serial atual difere do autorizado -> pede PIN de novo.
         assert response is not None
         assert "pin" in response.lower()
+
+    def test_sem_aparelho_identificado_nao_revoga(self, brain, monkeypatch):
+        """Sem saber qual é o aparelho, a autorização se mantém."""
+        monkeypatch.setattr(brain, "_current_phone_serial", lambda: "")
+        brain.phone_guard.grant("CELULAR_A")
+        assert brain._check_phone_access("pausa a musica no celular") is None

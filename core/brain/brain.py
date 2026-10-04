@@ -75,6 +75,10 @@ class VegaBrain:
 
         self.commands = VegaCommands(ai=self.ai, memory=self.memory)
 
+        # Canal para o painel da interface: prints e resultados visuais
+        # aparecem dentro da própria VEGA, além do visualizador do sistema.
+        self.commands._result_callback = self._emit_tool_result
+
         self.commands_parser = VegaCommandsParser(
             self.commands
         )
@@ -92,6 +96,15 @@ class VegaBrain:
         # sessão, e revoga quando o aparelho é desconectado.
         from core.connectivity.security_gate import PhoneAccessGuard
         self.phone_guard = PhoneAccessGuard(self.security)
+
+    def _emit_tool_result(self, name, result):
+        """Envia um resultado visual para a interface (se conectada)."""
+        callback = getattr(self, "tool_result_callback", None)
+        if callable(callback):
+            try:
+                callback(name, result)
+            except Exception as error:
+                print(f"[VEGA] Não foi possível exibir o resultado: {error}")
 
     def _on_scheduled_item(self, item):
         self.memory.add_daily_message("system", f"Lembrete: {item.get('text', '')}")
