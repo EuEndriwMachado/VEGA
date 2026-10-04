@@ -1275,6 +1275,9 @@ class VegaBrain:
                     due = datetime.fromisoformat(item["due_at"])
                 except (KeyError, TypeError, ValueError):
                     continue
+                # Inclui o que já venceu E o que ainda vence hoje.
+                # A janela vai do início de hoje até o fim de hoje; lembretes
+                # futuros de hoje (ex.: daqui a 2 horas) também contam.
                 if due.date() <= now.date():
                     reminders.append((due, item))
 
@@ -1282,7 +1285,7 @@ class VegaBrain:
         if reminders:
             lines.append("Lembretes e tarefas:")
             for due, item in sorted(reminders, key=lambda entry: entry[0])[:8]:
-                status = "atrasado" if due.date() < now.date() else due.strftime("%H:%M")
+                status = "atrasado" if due < now else due.strftime("%H:%M")
                 lines.append(f"- {status}: {item.get('text', 'lembrete')}")
         else:
             lines.append("Você não tem lembretes ou tarefas vencendo hoje.")

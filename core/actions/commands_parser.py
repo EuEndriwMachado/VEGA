@@ -1247,6 +1247,15 @@ class VegaCommandsParser:
 
         device = cls._mentions_device(text)
 
+        # Identificação do aparelho: "que celular é esse?", "qual é o meu celular?"
+        if device == "phone" and any(phrase in text for phrase in (
+            "que celular", "qual celular", "qual e o meu celular", "qual é o meu celular",
+            "que aparelho", "qual aparelho", "de quem e esse celular",
+            "de quem é esse celular", "meu celular e qual", "identifica o celular",
+            "qual o modelo", "que modelo",
+        )):
+            return ("identify", {})
+
         # Listagem genérica de dispositivos: não exige escolher celular ou TV.
         if any(word in text for word in ("quais dispositivos", "meus dispositivos",
                                          "dispositivos conectados", "lista os dispositivos")):

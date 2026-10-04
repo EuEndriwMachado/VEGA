@@ -13,8 +13,54 @@ com `ok=False` e uma mensagem pronta para ser falada.
 
 from __future__ import annotations
 
+import re
+import subprocess
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
+
+
+def fold_text(value) -> str:
+    """Normaliza texto para comparação: minúsculas, sem acento, sem pontuação.
+
+    Utilitário compartilhado — antes cada módulo de conectividade tinha a
+    sua própria cópia desta função.
+    """
+    text = str(value or "").strip().lower()
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def run_external(args, timeout=12, runner=None):
+    """Executa um comando externo com segurança. Retorna (ok, stdout, stderr).
+
+    `runner` permite injetar um executor falso em testes, sem tocar no
+    sistema real. Nunca levanta: falhas viram tuplas com ok=False.
+    """
+    if runner is not None:
+        return runner(args)
+
+    try:
+        completed = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.TimeoutExpired:
+        return False, "", "tempo esgotado"
+    except (OSError, ValueError) as error:
+        return False, "", str(error)
+
+    return (
+        completed.returncode == 0,
+        (completed.stdout or "").strip(),
+        (completed.stderr or "").strip(),
+    )
 
 
 @dataclass

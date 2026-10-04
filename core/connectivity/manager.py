@@ -15,29 +15,19 @@ Isso mantém a camada isolada e testável sem rede nem hardware.
 from __future__ import annotations
 
 import re
-import unicodedata
 
-from core.connectivity.base import ConnectorResult
+from core.connectivity.base import ConnectorResult, fold_text as _fold
 from core.connectivity.phone import PhoneConnector
 from core.connectivity.registry import DeviceRegistry
 from core.connectivity.tv import TVConnector
 
 
-def _fold(text) -> str:
-    value = str(text or "").lower()
-    value = unicodedata.normalize("NFKD", value)
-    value = "".join(ch for ch in value if not unicodedata.combining(ch))
-    value = re.sub(r"[^a-z0-9\s]", " ", value)
-    return re.sub(r"\s+", " ", value).strip()
-
-
-# Palavras que indicam "o celular" / "a TV" sem nome próprio.
-_PHONE_HINTS = ("celular", "telefone", "smartphone", "android", "meu phone")
-_TV_HINTS = ("tv", "televisao", "televisão", "televisor", "chromecast", "sala")
-
-
 class ConnectivityManager:
     """Fachada dos conectores de dispositivo da VEGA."""
+
+    # Palavras que indicam "o celular" / "a TV" sem nome próprio.
+    _PHONE_HINTS = ("celular", "telefone", "smartphone", "android", "meu phone")
+    _TV_HINTS = ("tv", "televisao", "televisão", "televisor", "chromecast", "sala")
 
     def __init__(self, registry=None, connectors=None):
         # Atenção: usar `is None` (e não `or`), porque DeviceRegistry define
@@ -76,9 +66,9 @@ class ConnectivityManager:
 
     def _guess_kind(self, text: str) -> str:
         folded = _fold(text)
-        if any(hint in folded for hint in _PHONE_HINTS):
+        if any(hint in folded for hint in self._PHONE_HINTS):
             return "phone"
-        if any(hint in folded for hint in _TV_HINTS):
+        if any(hint in folded for hint in self._TV_HINTS):
             return "tv"
         return ""
 
@@ -174,3 +164,12 @@ class ConnectivityManager:
             label = {"phone": "celular", "tv": "TV"}.get(kind, kind)
             parts.append(f"{label}: {', '.join(names)}")
         return "Dispositivos conhecidos — " + "; ".join(parts) + "."
+
+    def describe_primary(self) -> str:
+        """Descreve o celular principal (o do usuário), se conhecido."""
+        from core.connectivity.identity import DeviceIdentity
+        identity = DeviceIdentity(registry=self.registry)
+        for device in self.registry.by_kind("phone"):
+            if identity.is_primary(device):
+                return identity.describe(device)
+        return "Não tenho um celular principal identificado."

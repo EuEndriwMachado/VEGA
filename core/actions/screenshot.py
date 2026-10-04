@@ -15,21 +15,42 @@ import time
 SCREENSHOT_DIR = os.path.join("Uploads", "pc")
 
 
+def capture_image(monitor=0):
+    """Captura a tela do PC e devolve um objeto PIL.Image (sem salvar).
+
+    Fonte única de captura de tela: usada tanto pelo print do usuário
+    (que salva em disco) quanto pela visão do Gemini (que envia a imagem).
+    Retorna None se a captura não estiver disponível.
+    """
+    try:
+        import mss
+        from PIL import Image
+    except ImportError:
+        return None
+
+    try:
+        with mss.mss() as sct:
+            monitors = sct.monitors
+            index = monitor if 0 <= monitor < len(monitors) else 0
+            shot = sct.grab(monitors[index])
+            return Image.frombytes("RGB", shot.size, shot.rgb)
+    except Exception:
+        return None
+
+
 def capture_screen(show=True, monitor=0):
-    """Captura a tela do PC.
+    """Captura a tela do PC e salva em disco.
 
     Retorna um dict com:
       ok      -> bool
       message -> texto pronto para falar
       path    -> caminho absoluto do arquivo salvo
     """
-    try:
-        import mss
-        from PIL import Image
-    except ImportError as error:
+    image = capture_image(monitor=monitor)
+    if image is None:
         return {
             "ok": False,
-            "message": f"A captura de tela precisa do mss: {error}",
+            "message": "Não consegui capturar a tela. Verifique se o mss está instalado.",
             "path": "",
         }
 
@@ -37,16 +58,11 @@ def capture_screen(show=True, monitor=0):
     path = os.path.join(SCREENSHOT_DIR, f"pc_{int(time.time())}.png")
 
     try:
-        with mss.mss() as sct:
-            monitors = sct.monitors
-            index = monitor if 0 <= monitor < len(monitors) else 0
-            shot = sct.grab(monitors[index])
-            image = Image.frombytes("RGB", shot.size, shot.rgb)
-            image.save(path, "PNG")
+        image.save(path, "PNG")
     except Exception as error:
         return {
             "ok": False,
-            "message": f"Não consegui capturar a tela: {error}",
+            "message": f"Não consegui salvar o print: {error}",
             "path": "",
         }
 

@@ -22,7 +22,12 @@ import subprocess
 import time
 
 from core.connectivity.apps import AppDictionary
-from core.connectivity.base import Connector, ConnectorResult, ConnectorStatus
+from core.connectivity.base import (
+    Connector,
+    ConnectorResult,
+    ConnectorStatus,
+    run_external,
+)
 
 
 class PhoneConnector(Connector):
@@ -44,6 +49,8 @@ class PhoneConnector(Connector):
         self._scrcpy_path = None
         self._mirror_process = None
         self.apps = AppDictionary()
+        from core.connectivity.identity import DeviceIdentity
+        self.identity = DeviceIdentity(registry=registry)
         super().__init__(registry=registry, runner=runner)
 
     # ==========================================================
@@ -117,27 +124,8 @@ class PhoneConnector(Connector):
     # ==========================================================
 
     def _run(self, args, timeout=None):
-        """Executa um comando externo com segurança. Retorna (ok, stdout, stderr)."""
-        if self._runner is not None:
-            return self._runner(args)
-
-        try:
-            completed = subprocess.run(
-                args,
-                capture_output=True,
-                text=True,
-                timeout=timeout or self.TIMEOUT,
-                encoding="utf-8",
-                errors="replace",
-            )
-        except subprocess.TimeoutExpired:
-            return False, "", "tempo esgotado"
-        except (OSError, ValueError) as error:
-            return False, "", str(error)
-
-        output = (completed.stdout or "").strip()
-        error = (completed.stderr or "").strip()
-        return completed.returncode == 0, output, error
+        """Executa um comando externo (delega para o utilitário compartilhado)."""
+        return run_external(args, timeout=timeout or self.TIMEOUT, runner=self._runner)
 
     def _adb(self, *args, serial=None):
         adb = self._find_adb()
@@ -185,6 +173,7 @@ class PhoneConnector(Connector):
             "pull_file": self._action_pull_file,
             "mirror": self._action_mirror,
             "stop_mirror": self._action_stop_mirror,
+            "identify": self._action_identify,
             "media_pause": self._action_media_pause,
             "media_play": self._action_media_play,
             "media_next": self._action_media_next,
@@ -220,6 +209,7 @@ class PhoneConnector(Connector):
                 continue
             serial = parts[0]
             model = self._device_prop(serial, "ro.product.model") or "Celular"
+            brand = self._device_prop(serial, "ro.product.brand") or ""
 
             # Guarda o IP Wi-Fi quando disponível: é o endereço que permite
             # reconectar sem cabo depois. O serial fica como apelido.
@@ -231,21 +221,41 @@ class PhoneConnector(Connector):
                     ip = match.group(1)
 
             address = ip or serial
-            aliases = [serial, model]
-            if ip:
-                aliases.append(ip)
 
-            if self.registry is not None:
-                self.registry.remember(
-                    model, kind="phone", address=address, connector="phone",
-                    aliases=aliases, serial=serial, ip=ip,
-                )
-            found.append({"name": model, "address": address, "kind": "phone"})
+            # Identidade: reconhece o aparelho (ex.: Redmi Note 13 do Endriw)
+            # pelo modelo/marca/serial, e guarda isso no registro.
+            identity = self.identity.register(
+                model=model, brand=brand, serial=serial, address=address,
+                ip=ip,
+            )
+            found.append({
+                "name": identity["name"],
+                "address": address,
+                "kind": "phone",
+                "owner": identity["owner"],
+                "serial": serial,
+            })
         return found
 
     def _device_prop(self, serial, prop) -> str:
         ok, output, _error = self._adb("shell", "getprop", prop, serial=serial)
         return output.strip() if ok else ""
+
+    def _action_identify(self, device=None, **_kwargs) -> ConnectorResult:
+        """Diz qual é o aparelho conectado e de quem ele é."""
+        devices = self.discover()
+        if not devices:
+            return ConnectorResult.failure("Nenhum celular conectado para identificar.")
+
+        info = devices[0]
+        owner = info.get("owner") or ""
+        name = info.get("name") or "celular"
+
+        if owner:
+            return ConnectorResult.success(
+                f"Esse é o seu {name}, {owner}.", data=info,
+            )
+        return ConnectorResult.success(f"Esse é o {name}.", data=info)
 
     def _action_list(self, **_kwargs) -> ConnectorResult:
         devices = self.discover()

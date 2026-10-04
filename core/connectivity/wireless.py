@@ -19,7 +19,8 @@ from __future__ import annotations
 import re
 import shutil
 import socket
-import subprocess
+
+from core.connectivity.base import run_external
 
 
 class WirelessADB:
@@ -66,27 +67,8 @@ class WirelessADB:
         return ""
 
     def _run(self, args, timeout=None):
-        if self._runner is not None:
-            return self._runner(args)
-        try:
-            completed = subprocess.run(
-                args,
-                capture_output=True,
-                text=True,
-                timeout=timeout or self.CONNECT_TIMEOUT,
-                encoding="utf-8",
-                errors="replace",
-            )
-        except subprocess.TimeoutExpired:
-            return False, "", "tempo esgotado"
-        except (OSError, ValueError) as error:
-            return False, "", str(error)
-
-        return (
-            completed.returncode == 0,
-            (completed.stdout or "").strip(),
-            (completed.stderr or "").strip(),
-        )
+        """Executa um comando externo (delega para o utilitário compartilhado)."""
+        return run_external(args, timeout=timeout or self.CONNECT_TIMEOUT, runner=self._runner)
 
     # ==========================================================
     # PARECIMENTO (Android 11+)

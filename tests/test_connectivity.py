@@ -228,8 +228,43 @@ class TestPhoneConnector:
         connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
         result = connector.execute("list")
         assert result.ok
-        assert "Galaxy S23" in result.message
-        assert registry.find("galaxy s23") is not None
+        # O modelo é reconhecido por perfil: "Galaxy S23" -> "Celular Samsung".
+        assert "Samsung" in result.message
+        assert registry.find("Celular Samsung") is not None
+
+    def test_reconhece_redmi_note_13_do_endriw(self, monkeypatch, registry):
+        """O aparelho principal é reconhecido pelo modelo, com dono."""
+        responses = {
+            "devices": (True, "List of devices attached\n23129RA5FL\tdevice\n", ""),
+            "getprop": (True, "Redmi Note 13 4G\n", ""),
+        }
+        monkeypatch.setattr(
+            "core.connectivity.phone.shutil.which",
+            lambda name: "/usr/bin/adb" if name == "adb" else None,
+        )
+        connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
+        result = connector.execute("list")
+        assert result.ok
+        assert "Redmi Note 13 4G" in result.message
+
+        device = registry.find("Redmi Note 13 4G")
+        assert device is not None
+        assert device.metadata.get("owner") == "Endriw"
+
+    def test_identifica_o_celular_do_usuario(self, monkeypatch, registry):
+        responses = {
+            "devices": (True, "List of devices attached\n23129RA5FL\tdevice\n", ""),
+            "getprop": (True, "Redmi Note 13 4G\n", ""),
+        }
+        monkeypatch.setattr(
+            "core.connectivity.phone.shutil.which",
+            lambda name: "/usr/bin/adb" if name == "adb" else None,
+        )
+        connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
+        result = connector.execute("identify")
+        assert result.ok
+        assert "Redmi Note 13 4G" in result.message
+        assert "Endriw" in result.message
 
     def test_sem_dispositivo_conectado(self, monkeypatch, registry):
         responses = {"devices": (True, "List of devices attached\n", "")}

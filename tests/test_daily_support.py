@@ -80,12 +80,17 @@ def test_daily_overview_includes_due_reminders_and_todays_notes(tmp_path):
     brain.daily_support = VegaDailySupport(tmp_path / "daily_support.json")
     brain.daily_support.add_note("Revisar a introdução")
 
+    # Usa um horário GARANTIDAMENTE de hoje (23:59), não "daqui a 2 horas":
+    # se o teste roda às 23h, "+2h" cairia no dia seguinte e não deveria
+    # aparecer no resumo de HOJE.
+    hoje = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
+
     class FakeScheduler:
         @staticmethod
         def list():
             return [{
                 "text": "Entregar o relatório",
-                "due_at": (datetime.now().astimezone() + timedelta(hours=2)).isoformat(),
+                "due_at": hoje.isoformat(),
             }]
 
     brain.scheduler = FakeScheduler()
@@ -93,6 +98,49 @@ def test_daily_overview_includes_due_reminders_and_todays_notes(tmp_path):
 
     assert "Entregar o relatório" in summary
     assert "Revisar a introdução" in summary
+
+
+def test_daily_overview_ignores_reminders_from_other_days(tmp_path):
+    """Lembrete de amanhã não entra no resumo de hoje."""
+    brain = VegaBrain.__new__(VegaBrain)
+    brain.daily_support = VegaDailySupport(tmp_path / "daily_support.json")
+
+    amanha = datetime.now().astimezone() + timedelta(days=1)
+
+    class FakeScheduler:
+        @staticmethod
+        def list():
+            return [{
+                "text": "Reunião de amanhã",
+                "due_at": amanha.isoformat(),
+            }]
+
+    brain.scheduler = FakeScheduler()
+    summary = brain._process_daily_support_request("organiza meu dia")
+
+    assert "Reunião de amanhã" not in summary
+
+
+def test_daily_overview_marca_lembrete_atrasado(tmp_path):
+    """Lembrete vencido aparece como atrasado; o de hoje mostra o horário."""
+    brain = VegaBrain.__new__(VegaBrain)
+    brain.daily_support = VegaDailySupport(tmp_path / "daily_support.json")
+
+    atrasado = datetime.now().astimezone() - timedelta(days=1)
+
+    class FakeScheduler:
+        @staticmethod
+        def list():
+            return [{
+                "text": "Pagar a conta",
+                "due_at": atrasado.isoformat(),
+            }]
+
+    brain.scheduler = FakeScheduler()
+    summary = brain._process_daily_support_request("organiza meu dia")
+
+    assert "Pagar a conta" in summary
+    assert "atrasado" in summary.lower()
 
 
 def test_focus_session_command_generates_steps_and_can_progress(tmp_path):

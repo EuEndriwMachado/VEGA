@@ -27,5 +27,45 @@
       "wireless": true
     },
     "last_seen": "2026-10-03T21:58:56"
+  },
+  "celular xiaomi": {
+    "name": "Celular Xiaomi",
+    "kind": "phone",
+    "address": "192.168.15.4",
+    "connector": "phone",
+    "aliases": [
+      "celular xiaomi",
+      "adb-222a6388-jK6F3W._adb-tls-connect._tcp",
+      "192.168.15.4"
+    ],
+    "metadata": {
+      "serial": "adb-222a6388-jK6F3W._adb-tls-connect._tcp",
+      "model": "23129RA5FL",
+      "brand": "Redmi",
+      "owner": "",
+      "ip": "192.168.15.4"
+    },
+    "last_seen": "2026-10-03T22:21:20"
+  },
+  "redmi note 13 4g": {
+    "name": "Redmi Note 13 4G",
+    "kind": "phone",
+    "address": "192.168.15.4",
+    "connector": "phone",
+    "aliases": [
+      "meu celular",
+      "celular do endriw",
+      "redmi",
+      "adb-222a6388-jK6F3W._adb-tls-connect._tcp",
+      "192.168.15.4"
+    ],
+    "metadata": {
+      "serial": "adb-222a6388-jK6F3W._adb-tls-connect._tcp",
+      "model": "23129RA5FL",
+      "brand": "Redmi",
+      "owner": "Endriw",
+      "ip": "192.168.15.4"
+    },
+    "last_seen": "2026-10-03T22:21:50"
   }
 }

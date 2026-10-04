@@ -830,6 +830,20 @@ class VegaAI:
         )
 
     def _capture_screen(self):
+        """Captura a tela para enviar ao modelo (visão).
+
+        Delega para a fonte única de captura em core.actions.screenshot,
+        evitando duas implementações da mesma coisa.
+        """
+        try:
+            from core.actions.screenshot import capture_image
+            image = capture_image()
+            if image is not None:
+                return image
+        except Exception as error:
+            print(f"[VegaAI] Captura de tela indisponível: {error}")
+
+        # Reserva: captura direta, caso o módulo auxiliar falhe.
         try:
             import mss  # type: ignore
 
