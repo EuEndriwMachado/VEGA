@@ -758,6 +758,10 @@ def main():
         VegaCommands.register_database_callback(open_database_viewer)
         VegaHomework.status_callback = emit_vega_status
 
+        # Monitor de conexão do celular: reconecta sem fio quando o MIUI
+        # desliga a depuração (economia de bateria / queda de Wi-Fi).
+        brain.start_phone_monitor()
+
         # A sessão de projeto reutiliza a mesma janela do núcleo da Vega.
         project_ui = vega_ui
 

@@ -50,7 +50,13 @@ class PhoneConnector(Connector):
         self._mirror_process = None
         self.apps = AppDictionary()
         from core.connectivity.identity import DeviceIdentity
+        from core.connectivity.phone_actions import PhoneActions
         self.identity = DeviceIdentity(registry=registry)
+        # Ações avançadas (notificação, alarme, foto, ligação...) reutilizam
+        # o mesmo conector: não há uma segunda conexão com o aparelho.
+        # (nome diferente de "actions" para não colidir com o método da base)
+        # Criado ANTES do super(): _register_actions() roda dentro dele.
+        self.phone_actions = PhoneActions(self)
         super().__init__(registry=registry, runner=runner)
 
     # ==========================================================
@@ -174,6 +180,14 @@ class PhoneConnector(Connector):
             "mirror": self._action_mirror,
             "stop_mirror": self._action_stop_mirror,
             "identify": self._action_identify,
+            "notifications": self.phone_actions.notifications,
+            "set_alarm": self.phone_actions.set_alarm,
+            "list_alarms": self.phone_actions.list_alarms,
+            "locate": self.phone_actions.locate,
+            "take_photo": self.phone_actions.take_photo,
+            "call": self.phone_actions.call,
+            "send_message": self.phone_actions.send_message,
+            "bluetooth": self.phone_actions.bluetooth,
             "media_pause": self._action_media_pause,
             "media_play": self._action_media_play,
             "media_next": self._action_media_next,

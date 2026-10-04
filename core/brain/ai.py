@@ -20,7 +20,6 @@ from config.personality import build_personality_context
 
 from config.ai import (
     TEMPERATURE,
-    CONTEXT_SIZE,
     GEMINI_API_KEY,
     GEMINI_MODEL_NAME,
     GEMINI_FALLBACK_MODEL,

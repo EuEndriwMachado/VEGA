@@ -1281,6 +1281,58 @@ class VegaCommandsParser:
                     return ("reconnect", {})
                 if any(word in text for word in ("reconecta", "reconectar")):
                     return ("reconnect", {})
+
+                # ---- Notificações ----
+                if any(phrase in text for phrase in (
+                    "notificacoes", "notificações", "notificacao", "notificação",
+                    "chegou mensagem", "chegou alguma mensagem", "tem mensagem",
+                    "alguma notificacao", "o que chegou",
+                )):
+                    return ("notifications", {})
+
+                # ---- Alarme ----
+                alarm = cls._extract_alarm_request(text)
+                if alarm:
+                    return ("set_alarm", alarm)
+                if any(phrase in text for phrase in (
+                    "meus alarmes", "quais alarmes", "listar alarmes", "meus despertadores",
+                )):
+                    return ("list_alarms", {})
+
+                # ---- Localizar o celular ----
+                if any(phrase in text for phrase in (
+                    "onde esta meu celular", "onde está meu celular",
+                    "onde ta meu celular", "acha meu celular", "achar meu celular",
+                    "localiza o celular", "localizar o celular", "faz o celular tocar",
+                    "perdi meu celular",
+                )):
+                    return ("locate", {})
+
+                # ---- Foto com o celular ----
+                if any(phrase in text for phrase in (
+                    "tira uma foto com o celular", "tira foto com o celular",
+                    "foto pelo celular", "usa o celular como camera",
+                    "usa o celular como câmera", "tira uma foto pelo celular",
+                )):
+                    return ("take_photo", {})
+
+                # ---- Bluetooth do celular (antes de "ligar", que também
+                #      pode significar telefonar) ----
+                if "bluetooth" in text or "blutooth" in text:
+                    if any(word in text for word in ("desliga", "desligar", "desativa", "desativar", "off")):
+                        return ("bluetooth", {"enabled": False})
+                    return ("bluetooth", {"enabled": True})
+
+                # ---- Ligação ----
+                call = cls._extract_call_request(text)
+                if call:
+                    return ("call", call)
+
+                # ---- Mensagem ----
+                message = cls._extract_message_request(text)
+                if message:
+                    return ("send_message", message)
+
                 if "pausa" in text or "pause" in text:
                     return ("media_pause", {})
                 if "próxima" in text or "proxima" in text or "pula" in text:
@@ -1373,6 +1425,91 @@ class VegaCommandsParser:
         if value > 100:
             return None
         return value / 100.0
+
+    @staticmethod
+    def _extract_alarm_request(text):
+        """Extrai (hour, minute, label) de "me acorda as 6 e 30 no celular".
+
+        Aceita "6:30", "6 e 30", "6h30", "6 horas", "as 7".
+        """
+        if not any(word in text for word in (
+            "alarme", "despertador", "me acorda", "me acorde", "acorda", "desperta",
+        )):
+            return None
+
+        # "6:30" / "6h30" / "6 e 30" — testado ANTES da hora simples,
+        # senão "5:45" seria lido como "5".
+        # Obs.: o normalize_text troca ':' por espaço, então "5:45" chega
+        # como "5 45" e precisa ser tratado aqui também.
+        match = re.search(r"(\d{1,2})\s*(?::|h|e)\s*(\d{2})", text)
+        if not match:
+            match = re.search(r"(\d{1,2})\s+(\d{2})\b", text)
+        if match:
+            hour, minute = int(match.group(1)), int(match.group(2))
+        else:
+            # Só a hora: "as 7" / "7 horas". Ancora no verbo para não pegar
+            # números soltos do resto da frase.
+            match = re.search(
+                r"(?:as|às|a|para\s+as|para\s+às)\s+(\d{1,2})\s*(?:h|horas?)?",
+                text,
+            )
+            if not match:
+                match = re.search(r"\b(\d{1,2})\s*(?:h|horas?)\b", text)
+            if not match:
+                return None
+            hour, minute = int(match.group(1)), 0
+
+        # Ajusta período: "7 da noite" -> 19h.
+        if any(word in text for word in ("da noite", "da tarde")) and hour < 12:
+            hour += 12
+        if "da manha" in text or "da manhã" in text:
+            if hour == 12:
+                hour = 0
+
+        if not (0 <= hour <= 23) or not (0 <= minute <= 59):
+            return None
+
+        return {"hour": hour, "minute": minute, "label": "VEGA"}
+
+    @staticmethod
+    def _extract_call_request(text):
+        """Extrai (contact|number) de "liga pro joao no celular"."""
+        match = re.search(
+            r"(?:liga|ligar|ligue|disque|discar|chama|chamar)\s+"
+            r"(?:para\s+o\s+|para\s+a\s+|pro\s+|pra\s+|o\s+|a\s+)?"
+            r"([\w\s]+?)\s+(?:no|pelo|do)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone)",
+            text,
+        )
+        if not match:
+            return None
+        target = match.group(1).strip(" ,.!")
+        if not target:
+            return None
+
+        # Número explícito?
+        if re.fullmatch(r"[\d\s()+-]{4,}", target):
+            return {"number": target}
+        return {"contact": target}
+
+    @staticmethod
+    def _extract_message_request(text):
+        """Extrai (contact, text) de "manda mensagem pro joao dizendo que eu vou"."""
+        match = re.search(
+            r"(?:manda|mandar|envia|enviar|escreve|escrever)\s+"
+            r"(?:uma\s+)?(?:mensagem|msg|zap)\s+"
+            r"(?:para\s+o\s+|para\s+a\s+|pro\s+|pra\s+|ao\s+|a\s+)?"
+            r"([\w\s]+?)\s+"
+            r"(?:dizendo|falando|escrito)\s+(?:que\s+)?(.+?)"
+            r"(?:\s+(?:no|pelo|do)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|whatsapp|zap|smartphone))?$",
+            text,
+        )
+        if not match:
+            return None
+        contact = match.group(1).strip(" ,.!")
+        message = match.group(2).strip(" ,.!")
+        if not contact or not message:
+            return None
+        return {"contact": contact, "text": message}
 
     # ==========================================================
     # MÚSICA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA

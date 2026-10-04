@@ -97,6 +97,42 @@ class VegaBrain:
         from core.connectivity.security_gate import PhoneAccessGuard
         self.phone_guard = PhoneAccessGuard(self.security)
 
+        # Monitor de conexão: o MIUI desliga a depuração sem fio sozinho,
+        # então a VEGA tenta reconectar em segundo plano.
+        self.phone_monitor = None
+
+    def start_phone_monitor(self, interval=90.0):
+        """Liga o monitor de conexão do celular (chamado no startup da VEGA)."""
+        if self.phone_monitor is not None and self.phone_monitor.is_running:
+            return False
+        try:
+            from core.connectivity import DeviceRegistry
+            from core.connectivity.monitor import PhoneConnectionMonitor
+            from core.connectivity.wireless import WirelessADB
+
+            registry = DeviceRegistry()
+            monitor = PhoneConnectionMonitor(
+                wireless=WirelessADB(registry=registry),
+                registry=registry,
+                interval=interval,
+                on_event=self._on_phone_connection_event,
+            )
+            monitor.start()
+            self.phone_monitor = monitor
+            return True
+        except Exception as error:
+            print(f"[VEGA] Monitor do celular indisponível: {error}")
+            return False
+
+    def _on_phone_connection_event(self, result):
+        """Reage a mudanças na conexão do celular (log e status)."""
+        if result.get("connected"):
+            print("[VEGA Celular] Reconectado sem fio.")
+        else:
+            print("[VEGA Celular] Desconectado. Tentarei reconectar.")
+            # Sem celular: a autorização de controle cai junto.
+            self.revoke_phone_access()
+
     def _emit_tool_result(self, name, result):
         """Envia um resultado visual para a interface (se conectada)."""
         callback = getattr(self, "tool_result_callback", None)

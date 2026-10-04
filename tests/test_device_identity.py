@@ -209,3 +209,25 @@ class TestComandosDeVoz:
             normalize_text("que horas sao")
         )
         assert result is None
+
+    def test_bluetooth_nao_e_confundido_com_ligacao(self):
+        """"liga o bluetooth" não deve virar uma chamada telefônica."""
+        from core.actions.commands_parser import VegaCommandsParser
+        from core.brain.text_utils import normalize_text
+
+        result = VegaCommandsParser._resolve_connectivity_request(
+            normalize_text("liga o bluetooth do celular")
+        )
+        assert result is not None
+        assert result[0] == "bluetooth"
+        assert result[1]["enabled"] is True
+
+    def test_desligar_bluetooth_do_celular(self):
+        from core.actions.commands_parser import VegaCommandsParser
+        from core.brain.text_utils import normalize_text
+
+        result = VegaCommandsParser._resolve_connectivity_request(
+            normalize_text("desliga o bluetooth do celular")
+        )
+        assert result[0] == "bluetooth"
+        assert result[1]["enabled"] is False
