@@ -290,6 +290,19 @@ class VegaCommandsParser:
             return self.commands.alt_tab()
 
         # ======================================================
+        # CONECTIVIDADE — CELULAR / TV
+        # (antes de música/pesquisa: "pausa a música no celular"
+        # deve ir para o celular, não para a mídia do PC)
+        # ======================================================
+
+        connectivity = self._resolve_connectivity_request(normalized)
+        if connectivity is not None:
+            action, kwargs = connectivity
+            if action == "__discover__":
+                return self.commands.discover_devices()
+            return self.commands.connectivity_action(action, text=normalized, **kwargs)
+
+        # ======================================================
         # FUNK
         # ======================================================
 
@@ -1143,6 +1156,145 @@ class VegaCommandsParser:
                 "liga o som",
             )
         )
+
+    # ==========================================================
+    # CONECTIVIDADE — CELULAR / TV
+    # ==========================================================
+
+    _PHONE_WORDS = ("celular", "telefone", "smartphone", "android", "meu phone")
+    _TV_WORDS = ("tv", "televisao", "televisor", "chromecast")
+
+    @classmethod
+    def _mentions_device(cls, text):
+        """Retorna ('phone'|'tv'|'') conforme o dispositivo citado."""
+        if any(word in text for word in cls._PHONE_WORDS):
+            return "phone"
+        if any(word in text for word in cls._TV_WORDS):
+            return "tv"
+        return ""
+
+    @classmethod
+    def _resolve_connectivity_request(cls, text):
+        """Traduz uma fala em (action, kwargs) de conectividade, ou None.
+
+        Reconhece ações como: bateria, listar, abrir app, print, enviar
+        arquivo, espelhar, controle de mídia (celular); listar, tocar URL,
+        pausar, retomar, parar, volume, desligar (TV).
+        """
+
+        if not text:
+            return None
+
+        device = cls._mentions_device(text)
+
+        # Listagem genérica de dispositivos: não exige escolher celular ou TV.
+        if any(word in text for word in ("quais dispositivos", "meus dispositivos",
+                                         "dispositivos conectados", "lista os dispositivos")):
+            return ("__discover__", {})
+
+        # Ações que exigem um dispositivo explícito.
+        if device:
+            if "bateria" in text or "carregando" in text or "carga" in text:
+                return ("battery", {})
+
+            if device == "phone":
+                if any(phrase in text for phrase in ("tira um print", "tira print",
+                                                     "print da tela", "screenshot")):
+                    return ("screenshot", {})
+                if any(phrase in text for phrase in ("espelha", "espelhar", "mirror")):
+                    return ("mirror", {})
+                if "pausa" in text or "pause" in text:
+                    return ("media_pause", {})
+                if "próxima" in text or "proxima" in text or "pula" in text:
+                    return ("media_next", {})
+                app = cls._extract_phone_app(text)
+                if app:
+                    return ("open_app", {"app": app})
+                file_path = cls._extract_file_to_send(text)
+                if file_path:
+                    return ("send_file", {"path": file_path})
+                if any(word in text for word in ("conecta", "conectar", "pareia", "parear",
+                                                 "liga no celular", "status do celular")):
+                    return ("list", {})
+
+            if device == "tv":
+                if any(word in text for word in ("pausa", "pause")):
+                    return ("pause", {})
+                if any(word in text for word in ("retoma", "continua", "volta a tocar", "play")):
+                    return ("resume", {})
+                if any(word in text for word in ("para a", "parar", "stop")):
+                    return ("stop", {})
+                if any(word in text for word in ("desliga", "desligar", "turn off")):
+                    return ("turn_off", {})
+                level = cls._extract_volume_level(text)
+                if level is not None:
+                    return ("volume", {"level": level})
+                if "volume" in text or "som" in text:
+                    return ("volume", {})
+                if any(word in text for word in ("conecta", "conectar", "procura",
+                                                 "liga a tv", "status da tv")):
+                    return ("list", {})
+
+        # Ações que fazem sentido sem citar o dispositivo explicitamente.
+        if any(phrase in text for phrase in ("quais dispositivos", "meus dispositivos",
+                                             "dispositivos conectados")):
+            return ("__discover__", {})
+
+        return None
+
+    @staticmethod
+    def _extract_phone_app(text):
+        """Extrai o app pedido para abrir no celular."""
+        match = re.search(
+            r"(?:abre|abrir|abra|executa|executar)\s+(?:o\s+|a\s+)?(?:app\s+)?(.+?)\s+"
+            r"(?:no|na|do|da)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone|android)",
+            text,
+        )
+        if not match:
+            return ""
+        app = match.group(1).strip(" ,.!")
+        # Remove palavras de recheio.
+        app = re.sub(r"^(?:o|a|app)\s+", "", app).strip()
+        return app
+
+    @staticmethod
+    def _extract_file_to_send(text):
+        """Extrai o nome do arquivo em "manda o arquivo X pro celular".
+
+        A normalização remove pontuação, então reconstruímos a extensão
+        provável (ex.: "relatorio pdf" -> "relatorio.pdf") para que o
+        arquivo seja localizável no disco.
+        """
+        match = re.search(
+            r"(?:manda|mandar|envia|enviar|passa|passar)\s+(?:o\s+|a\s+)?(?:arquivo\s+)?(.+?)\s+"
+            r"(?:pro|para o|para a|no|na)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone|android)",
+            text,
+        )
+        if not match:
+            return ""
+
+        candidate = match.group(1).strip(" ,.!")
+        if not candidate:
+            return ""
+
+        # "relatorio pdf" -> "relatorio.pdf" (extensão separada pela normalização).
+        candidate = re.sub(
+            r"\s+(pdf|docx?|xlsx?|pptx?|txt|csv|png|jpe?g|gif|mp3|mp4|zip)$",
+            r".\1",
+            candidate,
+        )
+        return candidate
+
+    @staticmethod
+    def _extract_volume_level(text):
+        """Extrai um volume em % de "coloca o volume da tv em 40%" -> 0.4."""
+        match = re.search(r"(\d{1,3})\s*(?:%|por cento)?", text)
+        if not match:
+            return None
+        value = int(match.group(1))
+        if value > 100:
+            return None
+        return value / 100.0
 
     # ==========================================================
     # MÚSICA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA

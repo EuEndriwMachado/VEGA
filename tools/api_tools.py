@@ -424,6 +424,15 @@ def build_tool_registry(homework_handler=None) -> ToolManager:
         name="report", purpose="Monta um relatório estruturado a partir do pedido.", category="produtividade",
         parameters=["title", "sections"], tags=["relatorio", "resumo executivo"], implementation=monitoring.report,
     ))
+
+    # Ferramentas de conectividade (celular / TV). Registradas em bloco
+    # isolado: se a camada falhar, o registry continua íntegro.
+    try:
+        from tools.connectivity_tools import register_connectivity_tools
+        register_connectivity_tools(manager)
+    except Exception as error:
+        print(f"[VegaTools] Conectividade não registrada: {error}")
+
     return manager
 
 

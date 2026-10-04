@@ -1556,6 +1556,69 @@ class VegaCommands:
         return "Iniciando música ambiente."
 
     # ==========================================================
+    # CONECTIVIDADE (CELULAR / TV)
+    # ==========================================================
+
+    def connectivity(self):
+        """Cria sob demanda o gerenciador de conectividade.
+
+        Preguiçoso de propósito: a VEGA não paga custo de descoberta de
+        rede no startup, e se a camada falhar, só os comandos de
+        conectividade são afetados.
+        """
+        manager = getattr(self, "_connectivity_manager", None)
+        if manager is None:
+            try:
+                from core.connectivity import ConnectivityManager
+                manager = ConnectivityManager()
+            except Exception as error:
+                print(f"[VEGA] Conectividade indisponível: {error}")
+                manager = False
+            self._connectivity_manager = manager
+        return manager
+
+    def connectivity_action(self, action, text="", **kwargs):
+        """Executa uma ação de conectividade e devolve a mensagem para falar."""
+        manager = self.connectivity()
+        if not manager:
+            return "A camada de conectividade não está disponível agora."
+        result = manager.route(action, text=text, **kwargs)
+        return result.message or ("Feito." if result.ok else "Não consegui fazer isso.")
+
+    def list_devices(self):
+        manager = self.connectivity()
+        if not manager:
+            return "A camada de conectividade não está disponível agora."
+        return manager.describe_devices()
+
+    def discover_devices(self):
+        manager = self.connectivity()
+        if not manager:
+            return "A camada de conectividade não está disponível agora."
+        found = manager.discover_all()
+        total = sum(len(items) for items in found.values())
+        if not total:
+            return (
+                "Não encontrei dispositivos agora. Verifique se estão ligados "
+                "e na mesma rede."
+            )
+        names = [
+            item["name"]
+            for items in found.values()
+            for item in items
+            if isinstance(item, dict) and item.get("name")
+        ]
+        return f"Encontrei: {', '.join(names)}."
+
+    def connect_phone(self, action, text="", **kwargs):
+        """Atalho: ações no celular."""
+        return self.connectivity_action(action, text=text, kind="phone", **kwargs)
+
+    def connect_tv(self, action, text="", **kwargs):
+        """Atalho: ações na TV."""
+        return self.connectivity_action(action, text=text, kind="tv", **kwargs)
+
+    # ==========================================================
     # MODOS
     # ==========================================================
 
