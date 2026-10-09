@@ -47,18 +47,19 @@ class ConnectivityTools:
     # --------------------------------------------------------------
 
     def control_phone(self, action: str = "list", app: str = "", path: str = "",
-                      remote: str = "", device: str = ""):
+                      remote: str = "", device: str = "", contact: str = "",
+                      text: str = "", number: str = ""):
         """Controla o celular conectado: listar, bateria, abrir app, print,
-        enviar/receber arquivo, espelhar tela e controle de mídia."""
+        enviar/receber arquivo, espelhar tela, controle de mídia, ligar,
+        enviar mensagem, responder no WhatsApp e ler conversa."""
         kwargs = {}
-        if app:
-            kwargs["app"] = app
-        if path:
-            kwargs["path"] = path
-        if remote:
-            kwargs["remote"] = remote
-        if device:
-            kwargs["device"] = device
+        for key, value in (
+            ("app", app), ("path", path), ("remote", remote),
+            ("device", device), ("contact", contact), ("text", text),
+            ("number", number),
+        ):
+            if value:
+                kwargs[key] = value
         return self._run(action, "phone", **kwargs)
 
     def control_tv(self, action: str = "list", url: str = "", level=None,
@@ -91,14 +92,19 @@ def register_connectivity_tools(manager, connectivity_tools=None):
         manager.register(ToolSpec(
             name="control_phone",
             purpose=(
-                "Controla o celular Android conectado por USB: consultar bateria, "
-                "abrir aplicativo, tirar print da tela, enviar arquivo do PC para o "
-                "celular, trazer arquivo do celular, espelhar a tela e controlar a "
-                "mídia (pausar, tocar, próxima)."
+                "Controla o celular Android conectado: consultar bateria, abrir "
+                "aplicativo, tirar print, enviar/receber arquivo, espelhar tela, "
+                "controlar mídia, LIGAR (action='call', contact ou number), enviar "
+                "mensagem (action='send_whatsapp', contact + text), LER a conversa "
+                "de alguém (action='read_conversation', contact) e listar "
+                "notificações (action='notifications'). Use read_conversation "
+                "antes de responder alguém quando a pessoa pedir para responder "
+                "sem dizer o que escrever."
             ),
             category="conectividade",
-            parameters=["action", "app", "path", "remote", "device"],
-            tags=["celular", "telefone", "android", "smartphone", "bateria", "print"],
+            parameters=["action", "app", "path", "remote", "device", "contact", "text", "number"],
+            tags=["celular", "telefone", "android", "smartphone", "bateria", "print",
+                  "ligar", "ligacao", "mensagem", "whatsapp", "responde", "conversa"],
             implementation=tools.control_phone,
         ))
     except Exception as error:

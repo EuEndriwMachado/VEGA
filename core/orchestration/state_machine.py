@@ -35,15 +35,21 @@ class ConversationState:
     EXECUTING = "EXECUTING"
     ERROR = "ERROR"
 
-    # Transições permitidas: de -> {conjunto de estados válidos}
+    # Transições permitidas: de -> {conjunto de estados válidos}.
+    #
+    # A máquina precisa acompanhar o fluxo real: quando o usuário responde
+    # outra coisa enquanto a VEGA ainda fala ("responde o miguel" logo após
+    # uma resposta), o turno novo começa em SPEAKING e passa por PROCESSING/
+    # THINKING. Recusar isso travava a conversa, então essas transições são
+    # válidas de propósito.
     TRANSITIONS = {
         IDLE: {LISTENING},
-        LISTENING: {PROCESSING, IDLE, SPEAKING},
+        LISTENING: {PROCESSING, IDLE, SPEAKING, EXECUTING, THINKING},
         PROCESSING: {THINKING, SPEAKING, LISTENING, EXECUTING, ERROR, IDLE, INTERRUPTED},
-        THINKING: {SPEAKING, INTERRUPTED, ERROR, LISTENING, IDLE, EXECUTING},
-        SPEAKING: {LISTENING, INTERRUPTED, IDLE, ERROR, THINKING},
-        INTERRUPTED: {LISTENING, PROCESSING, IDLE},
-        EXECUTING: {LISTENING, IDLE, SPEAKING, ERROR},
+        THINKING: {SPEAKING, INTERRUPTED, ERROR, LISTENING, IDLE, EXECUTING, PROCESSING},
+        SPEAKING: {LISTENING, INTERRUPTED, IDLE, ERROR, THINKING, PROCESSING, EXECUTING},
+        INTERRUPTED: {LISTENING, PROCESSING, IDLE, THINKING, SPEAKING},
+        EXECUTING: {LISTENING, IDLE, SPEAKING, ERROR, PROCESSING, THINKING},
         ERROR: {LISTENING, IDLE, PROCESSING, THINKING, SPEAKING, EXECUTING},
     }
 

@@ -62,7 +62,8 @@ _CONTINUATION_PATTERNS = (
     r"^(?:e )?(?:mais|menos|outra vez|de novo|tambem|também)",
     r"^(?:nao|não)[, ]",
     r"^(?:mas|porem|porém|entao|então|agora)",
-    r"^^(?:cancele|cancela|para|pare|deixa)",
+    r"^(?:por que|porque|como|qual|quanto|onde|quando)\b",
+    r"^(?:cancele|cancela|para|pare|deixa)",
 )
 
 
@@ -109,13 +110,16 @@ class ConversationOrchestrator:
 
         # Contexto de sessão: assuntos tratados nesta sessão.
         self.session_topics = []            # [{"topic": str, "at": ts}]
-        self.session_decisions = []         # decisões/afirmações relevantes
 
         # Contexto de tarefa.
         self.task = TaskContext()
 
         # Anti-repetição.
         self.recent_openings = []           # começos das respostas recentes
+
+        # Assunto do último dado verificado por ferramenta (cotação, clima...).
+        # Antecedente preferencial de "e por que isso?".
+        self.last_tool_subject = ""
 
         self.max_immediate_turns = max_immediate_turns
         self.max_session_topics = max_session_topics
@@ -270,6 +274,9 @@ class ConversationOrchestrator:
         Retorna (texto_reescrito, houve_reescrita).
 
         Regras:
+        - "isso disso aquilo" + dado de ferramenta recente → substitui pelo
+          assunto do dado (ex.: "e por que isso?" → "e por que a cotação do
+          dólar está nesse valor?");
         - "isso disso aquilo" + tarefa pendente com alvo → substitui pelo alvo;
         - sem antecedente → marca contexto como perdido (métrica) e devolve
           o texto original (o modelo decide se pergunta de esclarecimento).
@@ -280,30 +287,76 @@ class ConversationOrchestrator:
         if not has_reference:
             return text, False
 
+        # O dado verificado mais recente é o antecedente mais provável: a fala
+        # anterior foi uma consulta real (cotação, clima) e "isso" aponta para
+        # o valor consultado, não para um tema genérico da sessão.
+        receipt_antecedent = self._receipt_antecedent()
+
         with self._lock:
-            antecedent = None
-            if self.task.target and self.task.state in ("pending", "done"):
-                antecedent = self.task.target
-            elif self.session_topics:
-                antecedent = self.session_topics[-1]["topic"]
+            antecedent = receipt_antecedent
+            if not antecedent:
+                if self.task.target and self.task.state in ("pending", "done"):
+                    antecedent = self.task.target
+                elif self.session_topics:
+                    antecedent = self.session_topics[-1]["topic"]
 
         if not antecedent:
             return text, False
 
-        # Substitui demonstrativos isolados pelo antecedente, preservando o resto.
-        rewritten = text
+        # Reescreve de forma natural: "e por que isso?" vira "e por que a
+        # cotação do dólar está nesse valor?". Colar o recibo inteiro aqui
+        # produzia frases quebradas ("e porque Cotação USD→BRL: 5,43...").
+        rewritten = self._rewrite_with_antecedent(text, antecedent)
+        if rewritten is None:
+            return text, False
+        return rewritten, True
+
+    # Conectores causais: a pergunta é sobre o MOTIVO do dado consultado.
+    _CAUSAL_MARKERS = ("por que", "porque", "porquê", "pq")
+
+    def _rewrite_with_antecedent(self, text: str, antecedent: str):
+        """Troca o demonstrativo pelo antecedente, ajustando a frase."""
+        folded = _fold(text)
+        is_causal = any(marker in folded for marker in self._CAUSAL_MARKERS)
+
+        replacement = antecedent
+        # Pergunta causal sobre um dado: o antecedente é o SUJEITO, não o valor.
+        # "e por que isso?" -> "e por que a cotação do dólar está nesse valor?"
+        if is_causal:
+            replacement = f"{antecedent} está nesse valor"
+
         for word in ("isso", "disso", "aquilo", "isto"):
             pattern = rf"\b{word}\b(?!\s+mesmo)"
-            if re.search(pattern, rewritten, flags=re.IGNORECASE):
-                rewritten = re.sub(
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                return re.sub(
                     pattern,
-                    antecedent,
-                    rewritten,
+                    replacement,
+                    text,
                     count=1,
                     flags=re.IGNORECASE,
                 )
-                return rewritten, True
-        return text, False
+        return None
+
+    # --------------------------------------------------------------
+    # Antecedente de dado verificado (ferramenta)
+    # --------------------------------------------------------------
+
+    def note_tool_receipt(self, subject: str, topic: str = ""):
+        """Registra o assunto do último dado verificado por uma ferramenta.
+
+        ``subject`` é o recibo completo (para o bloco de contexto); ``topic`` é
+        a forma curta usada para reescrever referências ("a cotação do dólar").
+        """
+        subject = str(subject or "").strip()
+        if not subject:
+            return
+        with self._lock:
+            self.last_tool_subject = subject
+            self.last_tool_topic = str(topic or "").strip() or subject
+
+    def _receipt_antecedent(self) -> str:
+        with self._lock:
+            return getattr(self, "last_tool_topic", "") or getattr(self, "last_tool_subject", "")
 
     # ==============================================================
     # MONTAGEM DO CONTEXTO PARA O MODELO
@@ -392,6 +445,7 @@ class ConversationOrchestrator:
         with self._lock:
             self.immediate.clear()
             self.session_topics.clear()
-            self.session_decisions.clear()
             self.recent_openings.clear()
+            self.last_tool_subject = ""
+            self.last_tool_topic = ""
             self.task = TaskContext()

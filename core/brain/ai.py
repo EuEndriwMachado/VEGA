@@ -17,6 +17,7 @@ import sounddevice as sd
 from google import genai
 from google.genai import types
 from config.personality import build_personality_context
+from config.cognitive import build_cognitive_context
 
 from config.ai import (
     TEMPERATURE,
@@ -76,7 +77,7 @@ REGRAS DE CONVERSA:
 - Preserve sua personalidade: seja espontânea, segura, informal, inteligente e levemente provocadora quando o contexto permitir.
 - Não transforme toda resposta em uma pergunta para Endriw.
 
-""" + build_personality_context()
+""" + build_personality_context() + build_cognitive_context()
 
 
 MAX_TOOL_ROUNDS = 5
@@ -833,7 +834,13 @@ class VegaAI:
 
         Delega para a fonte única de captura em core.actions.screenshot,
         evitando duas implementações da mesma coisa.
+
+        Antes de capturar, pede à interface para se esconder por um instante:
+        o tema da VEGA é quase preto (`#010305`), então quando a janela dela
+        está na frente a captura sai preta e o modelo responde "estou vendo uma
+        tela escura". A interface é restaurada logo depois da captura.
         """
+        self._hide_self_for_capture()
         try:
             from core.actions.screenshot import capture_image
             image = capture_image()
@@ -841,6 +848,8 @@ class VegaAI:
                 return image
         except Exception as error:
             print(f"[VegaAI] Captura de tela indisponível: {error}")
+        finally:
+            self._restore_self_after_capture()
 
         # Reserva: captura direta, caso o módulo auxiliar falhe.
         try:
@@ -857,6 +866,27 @@ class VegaAI:
         except Exception as error:
             print(f"[VegaAI] Captura de tela indisponível: {error}")
             return None
+
+    def _hide_self_for_capture(self):
+        """Pede à interface para sair da frente antes da captura.
+
+        O callback é opcional: sem interface (testes, uso headless) nada
+        acontece e a captura segue normalmente.
+        """
+        callback = getattr(self, "screen_hide_callback", None)
+        if callable(callback):
+            try:
+                callback()
+            except Exception:
+                pass
+
+    def _restore_self_after_capture(self):
+        callback = getattr(self, "screen_restore_callback", None)
+        if callable(callback):
+            try:
+                callback()
+            except Exception:
+                pass
 
     def _is_failure_response(self, text):
         lower = str(text or "").lower()
@@ -1298,7 +1328,7 @@ class VegaLiveSession:
     Usa o Gemini para percepção em tempo real (microfone/câmera/tela).
     """
 
-    def __init__(self, video_mode="camera", speaker=None, camera_index=1, microphone_index=1):
+    def __init__(self, video_mode="camera", speaker=None, camera_index=0, microphone_index=1):
         self.video_mode = video_mode
         self.camera_index = camera_index
         self.microphone_index = microphone_index

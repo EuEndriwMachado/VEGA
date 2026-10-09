@@ -2,10 +2,12 @@ import math
 import os
 import random
 import re
+import threading
 import time
 
 from PySide6.QtCore import (
     QEasingCurve,
+    QEvent,
     QPropertyAnimation,
     QRectF,
     QSize,
@@ -63,9 +65,16 @@ class InterfaceVEGA(QWidget):
     message_submitted = Signal(str, object)
     tool_result_ready = Signal(str, object)
     tool_result_cleared = Signal()
+    # Canvas de desenho ao vivo: sinal thread-safe (mesmo padrão do tool_result_ready).
+    canvas_draw_requested = Signal(str, object)
+    canvas_add_requested = Signal(object)
     brain_view_requested = Signal()
     camera_toggled = Signal(bool)
     microphone_toggled = Signal(bool)
+    # Câmera escolhida no menu (hover no botão de câmera).
+    camera_selected = Signal(int)
+    # Lista de câmeras pronta (vinda da thread de varredura).
+    cameras_loaded = Signal(object)
 
     _OPEN_PATTERN = re.compile(
         r"^(?:por favor\s+)?(?:pode|poderia|consegue)?\s*"
@@ -146,6 +155,14 @@ class InterfaceVEGA(QWidget):
         self.result_panel.hide()
         self.tool_result_ready.connect(self.show_tool_result)
         self.tool_result_cleared.connect(self.hide_tool_result)
+        # Canvas de desenho ao vivo: sinal -> slot (thread-safe).
+        self.canvas_draw_requested.connect(self.draw_on_live_canvas)
+        self.canvas_add_requested.connect(self.add_canvas_commands)
+
+        # Canvas de desenho ao vivo: widget INDEPENDENTE (janela própria).
+        # O orbe permanece desenhado no paintEvent desta classe, intocado.
+        self._live_canvas = None   # criado sob demanda (lazy)
+
         self._animation_timer = QTimer(self)
         self._animation_timer.timeout.connect(self._animate)
         self.hide()
@@ -238,6 +255,13 @@ class InterfaceVEGA(QWidget):
         self.text_button.clicked.connect(self._toggle_text)
         self.camera_button.toggled.connect(self.camera_toggled.emit)
         self.microphone_button.toggled.connect(self.microphone_toggled.emit)
+        # Menu de câmera: aparece ao passar o mouse no botão, permitindo
+        # escolher QUAL câmera a VEGA usa. O botão continua com a mesma função
+        # (clique = ativa/desativa); o menu é um widget separado, que não toca
+        # no orbe.
+        self._camera_menu = None
+        self._camera_scan_running = False
+        self.camera_button.installEventFilter(self)
         buttons_layout.addWidget(self.text_button)
         buttons_layout.addWidget(self.camera_button)
         buttons_layout.addWidget(self.microphone_button)
@@ -260,6 +284,120 @@ class InterfaceVEGA(QWidget):
         button.setGraphicsEffect(effect)
         button.pressed.connect(lambda: self._animate_button(button, effect))
         return button
+
+    # ------------------------------------------------------------------
+    # MENU DE CÂMERA (aparece ao passar o mouse no botão)
+    # ------------------------------------------------------------------
+
+    def eventFilter(self, watched, event):
+        """Atalho: o botão de câmera abre o painel pelo botão direito.
+
+        O CLIQUE normal continua com a função original (ativar/desativar
+        câmera). O painel de escolha abre pelo botão direito — que é um gesto
+        explícito e nunca faz a VEGA "travar" esperando o mouse.
+        """
+        if watched is getattr(self, "camera_button", None):
+            if event.type() == QEvent.Type.ContextMenu:
+                self._toggle_camera_menu()
+                return True
+        return super().eventFilter(watched, event)
+
+    def _toggle_camera_menu(self):
+        """Abre o menu nativo de câmera.
+
+        Usa `QMenu` em vez de um painel desenhado à mão: o Qt calcula o tamanho
+        pelo conteúdo e posiciona sozinho. As tentativas anteriores (Popup,
+        janela flutuante, widget filho) ou travavam a VEGA, ou viravam uma
+        "barrinha" porque a geometria era medida errado em janela frameless.
+
+        A varredura de câmeras roda em thread separada (abrir cada dispositivo
+        levava segundos e congelava a interface).
+        """
+        try:
+            from config.camera_menu import CameraMenu, load_preferred_camera
+
+            if self._camera_menu is None:
+                self._camera_menu = CameraMenu(self)
+                self._camera_menu.camera_selected.connect(self.camera_selected.emit)
+                self._camera_menu.rescan_requested.connect(self._reload_camera_menu)
+                self.cameras_loaded.connect(self._apply_camera_list)
+
+            atual = getattr(self, "camera_index", None)
+            if atual is None:
+                atual = load_preferred_camera()
+            self._camera_menu.populate(
+                self._cached_camera_devices(),
+                current_index=atual,
+            )
+            self._camera_menu.open_at(self.camera_button)
+            self._request_camera_list()
+        except Exception as error:
+            print(f"[VEGA Interface] Menu de câmera indisponível: {error}")
+
+    def _cached_camera_devices(self):
+        """Lista de câmeras já conhecida, sem abrir nenhum dispositivo."""
+        try:
+            from core.vision.camera import VegaCamera
+
+            cached = getattr(VegaCamera, "_devices_cache", None)
+            return [dict(item) for item in cached] if cached else []
+        except Exception:
+            return []
+
+    def _request_camera_list(self, force=False):
+        """Pede a lista de câmeras em SEGUNDO PLANO e entrega por sinal."""
+        if getattr(self, "_camera_scan_running", False):
+            return
+        self._camera_scan_running = True
+
+        def worker():
+            try:
+                from core.vision.camera import VegaCamera
+
+                if force:
+                    VegaCamera.invalidate_camera_cache()
+                devices = VegaCamera.list_camera_devices()
+            except Exception as error:
+                print(f"[VEGA Interface] Falha ao listar câmeras: {error}")
+                devices = []
+            finally:
+                self._camera_scan_running = False
+            try:
+                self.cameras_loaded.emit(devices)
+            except Exception:
+                pass
+
+        threading.Thread(
+            target=worker, name="VegaCameraScan", daemon=True
+        ).start()
+
+    def _apply_camera_list(self, devices):
+        """Recebe a lista pronta (na thread da UI) e atualiza o menu aberto."""
+        from config.camera_menu import load_preferred_camera
+
+        if self._camera_menu is None or not self._camera_menu.isVisible():
+            return
+        atual = getattr(self, "camera_index", None)
+        if atual is None:
+            atual = load_preferred_camera()
+        try:
+            self._camera_menu.populate(devices, current_index=atual)
+            self._camera_menu.open_at(self.camera_button)
+        except Exception as error:
+            print(f"[VEGA Interface] Falha ao montar o menu de câmera: {error}")
+
+    def _reload_camera_menu(self):
+        """"Procurar novamente": descarta o cache e re-escaneia em fundo."""
+        self._request_camera_list(force=True)
+
+    def set_camera_index(self, index):
+        """Registra qual câmera está selecionada (usado pelo painel)."""
+        try:
+            self.camera_index = int(index)
+        except (TypeError, ValueError):
+            self.camera_index = None
+        if self._camera_menu is not None:
+            self._camera_menu.hide()
 
     def _position_controls(self):
         if not hasattr(self, "controls_panel"):
@@ -582,6 +720,53 @@ class InterfaceVEGA(QWidget):
     @Slot(str)
     def executar_comando_holografico(self, command):
         return self.executar_comando(command)
+
+    # ==================================================================
+    # CANVAS DE DESENHO AO VIVO (Fase 3)
+    # Janela independente; o orbe permanece intocado.
+    # ==================================================================
+
+    def get_live_canvas(self):
+        """Retorna o painel de desenho, criando-o sob demanda."""
+        if self._live_canvas is None:
+            from config.live_canvas import LiveCanvasDialog
+            self._live_canvas = LiveCanvasDialog()
+        return self._live_canvas
+
+    @Slot(str, object)
+    def draw_on_live_canvas(self, title, spec):
+        """Recebe o plano da IA e desenha animado no painel.
+
+        Chamado pelo cérebro via sinal (thread-safe, como os outros slots).
+        """
+        try:
+            from config.live_canvas import build_commands_from_spec
+            commands = build_commands_from_spec(spec if isinstance(spec, dict) else {})
+            if not commands:
+                return False
+            canvas = self.get_live_canvas()
+            canvas.start_drawing(title)
+            canvas.set_commands(commands)
+            return True
+        except Exception as error:
+            print(f"[VEGA Canvas] Erro ao desenhar: {error}")
+            return False
+
+    @Slot(object)
+    def add_canvas_commands(self, extra_commands):
+        """Adiciona comandos ao desenho em andamento (editar no meio)."""
+        try:
+            from config.live_canvas import build_commands_from_spec
+            if self._live_canvas is None:
+                return False
+            extra = build_commands_from_spec(extra_commands if isinstance(extra_commands, dict) else {})
+            if not extra:
+                return False
+            self._live_canvas.add_commands(extra)
+            return True
+        except Exception as error:
+            print(f"[VEGA Canvas] Erro ao editar desenho: {error}")
+            return False
 
     def conectar_camera(self, camera, start=False):
         self.camera = camera

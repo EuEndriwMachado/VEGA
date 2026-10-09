@@ -26,7 +26,10 @@ class ConnectivityManager:
     """Fachada dos conectores de dispositivo da VEGA."""
 
     # Palavras que indicam "o celular" / "a TV" sem nome próprio.
-    _PHONE_HINTS = ("celular", "telefone", "smartphone", "android", "meu phone")
+    # "whatsapp"/"zap" contam como celular: "manda mensagem pro joao no
+    # whatsapp" sem citar "celular" ia para o roteamento vazio.
+    _PHONE_HINTS = ("celular", "telefone", "smartphone", "android", "meu phone",
+                    "whatsapp", "zap")
     _TV_HINTS = ("tv", "televisao", "televisão", "televisor", "chromecast", "sala")
 
     def __init__(self, registry=None, connectors=None):
@@ -103,13 +106,16 @@ class ConnectivityManager:
         }
         return "" if candidate in stopwords else candidate
 
-    def route(self, action: str, text: str = "", **kwargs) -> ConnectorResult:
+    def route(self, action: str, spoken_text: str = "", **kwargs) -> ConnectorResult:
         """Roteia uma ação para o conector certo.
 
-        `text` é a fala original do usuário (usada para inferir o alvo).
+        `spoken_text` é a fala original do usuário (usada para inferir o alvo).
+        Os handlers recebem APENAS os kwargs: alguns usam o próprio parâmetro
+        `text` como conteúdo (send_message), e misturar os dois nomes fazia o
+        Python lançar "got multiple values for 'text'".
         Retorna sempre um ConnectorResult (nunca levanta).
         """
-        kind = kwargs.pop("kind", "") or self._guess_kind(text)
+        kind = kwargs.pop("kind", "") or self._guess_kind(spoken_text)
 
         if not kind:
             return ConnectorResult.failure(
@@ -123,13 +129,17 @@ class ConnectivityManager:
             )
 
         if "device" not in kwargs and "tv" not in kwargs:
-            name = self._guess_device_name(text, kind)
+            name = self._guess_device_name(spoken_text, kind)
             if name:
                 if kind == "tv":
                     kwargs["tv"] = name
                 else:
                     kwargs["device"] = name
 
+        # A fala NÃO é repassada ao handler: alguns handlers usam o próprio
+        # parâmetro `text` como conteúdo (send_message), e a fala sobrescreveria
+        # o conteúdo — ou o conteúdo vazio sobrescreveria a fala, dependendo da
+        # ordem. O conector já recebeu tudo que precisa via kwargs.
         return connector.execute(action, **kwargs)
 
     # ==========================================================

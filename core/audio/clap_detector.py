@@ -9,9 +9,9 @@ class ClapDetector:
 
     def __init__(
         self,
-        threshold=0.35,
-        min_interval=0.12,
-        max_interval=0.40,
+        threshold=0.08,
+        min_interval=0.10,
+        max_interval=0.65,
         on_double_clap_callback=None
     ):
         self.threshold = threshold

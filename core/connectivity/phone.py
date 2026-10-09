@@ -187,10 +187,16 @@ class PhoneConnector(Connector):
             "take_photo": self.phone_actions.take_photo,
             "call": self.phone_actions.call,
             "send_message": self.phone_actions.send_message,
+            "send_whatsapp": self.phone_actions.send_whatsapp,
+            "read_conversation": self.phone_actions.read_conversation,
+            "search_web": self.phone_actions.search_web,
+            "play_music": self.phone_actions.play_music,
             "bluetooth": self.phone_actions.bluetooth,
             "media_pause": self._action_media_pause,
             "media_play": self._action_media_play,
             "media_next": self._action_media_next,
+            "media_previous": self._action_media_previous,
+            "media_stop": self._action_media_stop,
             "pair_wireless": self._action_pair_wireless,
             "connect_wireless": self._action_connect_wireless,
             "enable_wireless": self._action_enable_wireless,
@@ -205,6 +211,13 @@ class PhoneConnector(Connector):
             return "Qual arquivo você quer enviar para o celular?"
         if action == "pull_file" and not str(kwargs.get("remote") or "").strip():
             return "Qual arquivo do celular você quer trazer?"
+        if action == "send_whatsapp":
+            if not str(kwargs.get("contact") or "").strip():
+                return "Para quem eu envio a mensagem?"
+            if not str(kwargs.get("text") or "").strip():
+                return "O que eu escrevo na mensagem?"
+        if action == "read_conversation" and not str(kwargs.get("contact") or "").strip():
+            return "De quem você quer ler as mensagens?"
         return ""
 
     def discover(self) -> list:
@@ -295,6 +308,8 @@ class PhoneConnector(Connector):
 
         level = ""
         charging = ""
+        temperature = ""
+        health = ""
         for line in output.splitlines():
             line = line.strip()
             if line.startswith("level:"):
@@ -302,6 +317,14 @@ class PhoneConnector(Connector):
             elif line.startswith("status:"):
                 status = line.split(":", 1)[1].strip()
                 charging = "carregando" if status in {"2", "5"} else "descarregando"
+            elif line.startswith("temperature:"):
+                raw_temperature = line.split(":", 1)[1].strip()
+                try:
+                    temperature = f"{int(raw_temperature) / 10:.1f}°C"
+                except ValueError:
+                    temperature = ""
+            elif line.startswith("health:"):
+                health = line.split(":", 1)[1].strip()
 
         if not level:
             return ConnectorResult.failure("Não consegui interpretar o nível da bateria.")
@@ -309,7 +332,14 @@ class PhoneConnector(Connector):
         detail = f"bateria em {level}%"
         if charging:
             detail += f", {charging}"
-        return ConnectorResult.success(f"A {detail}.", data={"level": level})
+        if temperature:
+            detail += f", temperatura de {temperature}"
+        if health and health not in {"2", "1"}:
+            detail += f", estado {health.lower()}"
+        return ConnectorResult.success(
+            f"A {detail}.",
+            data={"level": level, "charging": charging, "temperature": temperature, "health": health},
+        )
 
     def _action_open_app(self, app="", device=None, **_kwargs) -> ConnectorResult:
         app = str(app or "").strip()
@@ -460,6 +490,12 @@ class PhoneConnector(Connector):
         return ConnectorResult.failure(f"Não consegui trazer {remote} do celular.")
 
     # Perfis de espelhamento: equilibram fluidez x qualidade.
+    #
+    # ATENÇÃO: os nomes das opções precisam existir na versão instalada do
+    # scrcpy. `--buffer-time` NÃO existe no scrcpy 3.x (o correto é
+    # `--video-buffer`); com uma opção inválida o scrcpy sai na hora com
+    # "unknown option" e nada aparece — era o "falou que espelhou mas não
+    # aconteceu nada".
     MIRROR_PROFILES = {
         # Modo padrão: fluido, bom para uso geral e Wi-Fi.
         "balanced": [
@@ -467,15 +503,15 @@ class PhoneConnector(Connector):
             "--max-fps", "30",          # limita a taxa de quadros
             "--video-bit-rate", "4M",   # bitrate adequado sem saturar Wi-Fi
             "--audio-bit-rate", "96K",
-            "--buffer-time", "50",      # menos latência de buffer
+            "--video-buffer", "50",     # menos latência de buffer
         ],
         # Modo rápido: máxima fluidez, qualidade menor.
         "fast": [
-            "",
+            "--max-size", "1024",
             "--max-fps", "30",
             "--video-bit-rate", "2M",
             "--audio-bit-rate", "64K",
-            "--buffer-time", "35",
+            "--video-buffer", "35",
             "--video-codec", "h264",
         ],
         # Modo qualidade: imagem melhor, exige rede boa.
@@ -483,7 +519,7 @@ class PhoneConnector(Connector):
             "--max-size", "1600",
             "--max-fps", "60",
             "--video-bit-rate", "8M",
-            "--buffer-time", "80",
+            "--video-buffer", "80",
         ],
         # Modo sem áudio: para quem quer só a tela (mais leve ainda).
         "silent": [
@@ -491,7 +527,7 @@ class PhoneConnector(Connector):
             "--max-fps", "30",
             "--video-bit-rate", "4M",
             "--no-audio",
-            "--buffer-time", "50",
+            "--video-buffer", "50",
         ],
     }
 
@@ -518,14 +554,51 @@ class PhoneConnector(Connector):
 
         command = [scrcpy, "-s", serial, *options]
 
+        # O scrcpy usa o próprio adb empacotado, que pode ser um servidor
+        # DIFERENTE do que a VEGA usou para conectar o celular sem fio — e aí
+        # o scrcpy não enxerga o aparelho. Apontamos o scrcpy para o MESMO
+        # adb da VEGA pela variável de ambiente ADB.
+        env = dict(os.environ)
+        adb_path = self._find_adb()
+        if adb_path:
+            env["ADB"] = adb_path
+
         try:
+            # Sem CREATE_NO_WINDOW: essa flag escondia a janela do scrcpy em
+            # alguns sistemas, então o espelhamento "abria" invisível.
             self._mirror_process = subprocess.Popen(
                 command,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=env,
             )
         except OSError as error:
             self._mirror_process = None
             return ConnectorResult.failure(f"Não consegui iniciar o espelhamento: {error}")
+
+        # O scrcpy pode sair imediatamente (opção inválida, sem dispositivo,
+        # tela bloqueada...). Antes a VEGA anunciava "Espelhando a tela" sem
+        # conferir nada — daí o "falou que espelhou mas não aconteceu nada".
+        # Damos um instante e conferimos se o processo continua vivo.
+        time.sleep(1.5)
+        if self._mirror_process.poll() is not None:
+            output = ""
+            try:
+                output = (self._mirror_process.stdout.read() or "").strip()
+            except Exception:
+                output = ""
+            self._mirror_process = None
+            detail = output.splitlines()[-1] if output else ""
+            message = "O espelhamento não abriu."
+            if detail:
+                message += f" Motivo do scrcpy: {detail}"
+            else:
+                message += (
+                    " Verifique se o celular está conectado e desbloqueado, "
+                    "e se o scrcpy está instalado corretamente."
+                )
+            return ConnectorResult.failure(message)
 
         return ConnectorResult.success("Espelhando a tela do celular.")
 
@@ -636,4 +709,14 @@ class PhoneConnector(Connector):
         result = self._media_key(87, device)  # KEYCODE_MEDIA_NEXT
         if result.ok:
             return ConnectorResult.success("Pulei para a próxima no celular.")
+        return result
+    def _action_media_previous(self, device=None, **_kwargs) -> ConnectorResult:
+        result = self._media_key(88, device)  # KEYCODE_MEDIA_PREVIOUS
+        if result.ok:
+            return ConnectorResult.success("Voltei para a mídia anterior no celular.")
+        return result
+    def _action_media_stop(self, device=None, **_kwargs) -> ConnectorResult:
+        result = self._media_key(86, device)  # KEYCODE_MEDIA_STOP
+        if result.ok:
+            return ConnectorResult.success("Parei a mídia no celular.")
         return result

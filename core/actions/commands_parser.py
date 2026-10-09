@@ -1,8 +1,43 @@
 import re
 import unicodedata
 
+from core.actions.intent_catalog import IntentCatalog, IntentContext
+
+
+class _DryRunCommands:
+    """Substituto seguro do VegaCommands para interpretar sem executar.
+
+    Ações (desligar, apagar, transmitir...) devolvem uma resposta neutra
+    em vez de executar. Consultas (has_*, is_*, get_*) passam para o objeto
+    real: o parser precisa delas para decidir o roteamento, e consultas não
+    têm efeito colateral.
+    """
+
+    _NEUTRAL = "[dry-run] comando reconhecido (nao executado)."
+
+    # Prefixos de métodos de CONSULTA: seguem para o objeto real.
+    _QUERY_PREFIXES = ("has_", "is_", "get_", "list_", "_extract")
+
+    def __init__(self, real):
+        self._real = real
+
+    def __getattr__(self, name):
+        real_value = getattr(self._real, name)
+        if not callable(real_value):
+            return real_value
+        if name.startswith(self._QUERY_PREFIXES):
+            return real_value
+
+        def neutral(*args, **kwargs):
+            return _DryRunCommands._NEUTRAL
+        return neutral
+
 
 class VegaCommandsParser:
+
+    # URL preservada do texto original para pedidos de mídia na TV.
+    # A normalização destrói "https://...", então ela é capturada antes.
+    _pending_media_url = ""
 
     _DATABASE_VIEW_PATTERN = re.compile(
         r"^(?:por\s+favor\s+|por\s+gentileza\s+)?"
@@ -24,10 +59,7 @@ class VegaCommandsParser:
 
     def __init__(self, commands):
         self.commands = commands
-
-    # ==========================================================
-    # PROCESSAR COMANDO
-    # ==========================================================
+        self._intent_catalog = self._build_intent_catalog()
 
     def parse(self, text):
 
@@ -39,6 +71,51 @@ class VegaCommandsParser:
             print(f"[VegaCommandsParser] Falha ao interpretar comando: {error}")
             return None
 
+    def interpret(self, text):
+        """Interpreta uma fala SEM executar nada.
+
+        Devolve (matched, response). É o caminho para testes/diagnósticos
+        verificarem o roteamento com segurança total — antes, testar
+        "desliga o pc" com o parser real APAGAVA o computador do usuário.
+        """
+        previous = self.commands
+        self.commands = _DryRunCommands(previous)
+        try:
+            response = self.parse(text)
+            return response is not None, response
+        finally:
+            self.commands = previous
+
+    # ==========================================================
+    # CATÁLOGO DE INTENÇÕES
+    # ==========================================================
+    #
+    # Cada capacidade é um DADO (nome, resolvedor, executor, prioridade), não
+    # mais um `if` escrito na mão dentro de _parse_inner. Adicionar uma frase
+    # nova passa a ser adicionar uma regra, sem tocar no fluxo de reconhecimento.
+    #
+    # Os resolvedores delegam aos reconhecedores `_is_*` já existentes (e já
+    # cobertos por testes): a migração muda ONDE o critério é registrado, não o
+    # critério em si. Isso mantém a cobertura e o comportamento idênticos.
+    def _build_intent_catalog(self):
+        from core.actions.intents_apps import build_app_rules
+        from core.actions.intents_media import build_media_rules
+        from core.actions.intents_system import build_system_rules
+
+        catalog = IntentCatalog()
+        catalog.extend(build_system_rules(self))
+        catalog.extend(build_media_rules(
+            self,
+            extract_close_app_name=self._extract_close_app_name,
+            normalize_app_name=self._normalize_app_name,
+        ))
+        catalog.extend(build_app_rules(self))
+        return catalog
+
+    def _process_compound_browser_command(self, text):
+        """Reservado para comandos compostos de navegador (ex.: abrir + buscar)."""
+        return None
+
     def _parse_inner(self, text):
 
         # Entrada malformada nunca deve levantar: devolve um "no-match" seguro.
@@ -46,6 +123,9 @@ class VegaCommandsParser:
             return None
         if not text or not text.strip():
             return None
+        # A URL de um pedido de mídia é preservada do texto ORIGINAL: a
+        # normalização remove ":" e "/", o que destruiria "https://...".
+        VegaCommandsParser._pending_media_url = self._extract_media_url(text)
         try:
             normalized = self.normalize(text)
         except Exception:
@@ -83,86 +163,47 @@ class VegaCommandsParser:
                 return handler(self.commands)
 
         # ======================================================
-        # SISTEMA
+        # SISTEMA / TELA / BLUETOOTH / NOTIFICAÇÕES / BRILHO / VOLUME
+        # Reconhecimento via catálogo de intenções (ordem por prioridade).
+        # A ordem preserva o que os comentários originais exigiam: cancelamento
+        # antes de desligamento; "máximo/mínimo" antes de "aumenta/diminui".
         # ======================================================
 
-        # Cancelamento precisa vir antes de desligamento.
-        if self._is_cancel_shutdown_request(normalized):
-            return self.commands.cancel_shutdown()
-
-        if self._is_restart_request(normalized):
-            return self.commands.restart_pc()
-
-        if self._is_shutdown_request(normalized):
-            return self.commands.shutdown_pc()
-
-        # ======================================================
-        # TELA / SEGURANÇA
-        # ======================================================
-
-        if self._is_screen_off_request(normalized):
-            return self.commands.turn_off_screen()
-
-        if self._is_lock_request(normalized):
-            return self.commands.lock_pc()
+        catalog_context = IntentContext(
+            text=normalized,
+            original=text,
+            commands=self.commands,
+            parser=self,
+        )
+        catalog_rule, catalog_response = self._intent_catalog.resolve(catalog_context)
+        if catalog_rule is not None:
+            return catalog_response
 
         # ======================================================
-        # BLUETOOTH
+        # CONECTIVIDADE — CELULAR / TV
+        # (antes do volume/música/pesquisa: "aumenta o volume da tv"
+        # deve ir para a TV, não para o volume do PC; "pausa a música
+        # no celular" deve ir para o celular, não para a mídia do PC)
         # ======================================================
 
-        if self._is_bluetooth_on_request(normalized):
-            return self.commands.set_bluetooth(True)
-
-        if self._is_bluetooth_off_request(normalized):
-            return self.commands.set_bluetooth(False)
-
-        # ======================================================
-        # NOTIFICAÇÕES
-        # ======================================================
-
-        if self._is_notifications_on_request(normalized):
-            return self.commands.set_notifications(True)
-
-        if self._is_notifications_off_request(normalized):
-            return self.commands.set_notifications(False)
-
-        # ======================================================
-        # BRILHO
-        # ======================================================
-
-        if self._is_brightness_max_request(normalized):
-            return self.commands.brightness_max()
-
-        if self._is_brightness_min_request(normalized):
-            return self.commands.brightness_min()
-
-        if self._is_brightness_up_request(normalized):
-            return self.commands.brightness_up()
-
-        if self._is_brightness_down_request(normalized):
-            return self.commands.brightness_down()
-
-        # ======================================================
-        # VOLUME
-        # ======================================================
-
-        if self._is_mute_request(normalized):
-            return self.commands.volume_mute()
-
-        if self._is_unmute_request(normalized):
-            return self.commands.volume_unmute()
-
-        if self._is_volume_max_request(normalized):
-            return self.commands.volume_max()
-
-        if self._is_volume_min_request(normalized):
-            return self.commands.volume_min()
-
-        if self._is_volume_up_request(normalized):
-            return self.commands.volume_up()
-
-        if self._is_volume_down_request(normalized):
-            return self.commands.volume_down()
+        connectivity = self._resolve_connectivity_request(normalized)
+        if connectivity is not None:
+            action, kwargs = connectivity
+            if action == "__discover__":
+                return self.commands.discover_devices()
+            if action == "__pc_screenshot__":
+                return self.commands.screenshot_pc()
+            if action == "__phone_screenshot__":
+                return self.commands.connectivity_action(
+                    "screenshot", text=normalized, kind="phone",
+                )
+            # O kwargs pode trazer a própria chave "text" (ex.: send_message
+            # com o texto da mensagem). O texto da FALA sempre vence para o
+            # roteamento; o texto da mensagem vai dentro do kwargs e é usado
+            # pelo handler. Sem a ordem certa, Python levanta "got multiple
+            # values for 'text'" ou o roteador perdia o dispositivo.
+            dispatch_kwargs = {**kwargs, "text": normalized}
+            return self.commands.connectivity_action(action, **dispatch_kwargs)
 
         # ======================================================
         # PLAYLISTS PESSOAIS ("toca minha playlist X")
@@ -205,6 +246,17 @@ class VegaCommandsParser:
         # MÍDIA
         # ======================================================
 
+        # Pedido genérico de TOCAR música ("toca música", "toca uma música")
+        # não é play/pause: sem faixa tocando, o teclado de mídia não faz
+        # nada. Encaminha para play_music, que pergunta qual música tocar
+        # quando nenhuma foi dita.
+        if normalized in (
+            "toca musica", "tocar musica", "toque musica",
+            "toca uma musica", "tocar uma musica", "toque uma musica",
+            "toca uma música", "tocar uma música", "toque uma música",
+        ):
+            return self.commands.play_music("", platform="youtube")
+
         if self._is_media_play_pause_request(normalized):
             return self.commands.media_play_pause()
 
@@ -218,269 +270,13 @@ class VegaCommandsParser:
             return self.commands.media_stop()
 
         # ======================================================
-        # FECHAR APLICATIVO
+        # MÍDIA / JANELAS / TECLADO / FUNK / BUSCA / SITES / PASTAS / APPS
+        # Migrados para o catálogo de intenções (ver `_build_intent_catalog`).
+        # A resolução acontece logo abaixo, em prioridade, dentro de
+        # `self._intent_catalog.resolve(...)`. Os reconhecedores `_is_*` e os
+        # extratores continuam existindo e testados: mudou ONDE são
+        # registrados, não o critério.
         # ======================================================
-        #
-        # This must run before the generic "close window" shortcut. A
-        # request such as "fecha o programa Spotify" also contains the
-        # generic phrase "fecha o programa", but it has a named target and
-        # should terminate that application instead of only closing the
-        # currently active window.
-        close_app_name = self._extract_close_app_name(normalized)
-
-        if close_app_name:
-            close_app_name = self._normalize_app_name(close_app_name)
-            if close_app_name:
-                return self.commands.close_app(close_app_name)
-
-        # ======================================================
-        # JANELAS
-        # ======================================================
-
-        if self._is_close_window_request(normalized):
-            return self.commands.close_window()
-
-        if self._is_minimize_all_request(normalized):
-            return self.commands.minimize_all()
-
-        if self._is_fullscreen_request(normalized):
-            return self.commands.fullscreen()
-
-        if self._is_maximize_request(normalized):
-            return self.commands.maximize_window()
-
-        if self._is_restore_request(normalized):
-            return self.commands.restore_window()
-
-        if self._is_minimize_request(normalized):
-            return self.commands.minimize_window()
-
-        if self._is_switch_window_request(normalized):
-            return self.commands.switch_window()
-
-        # ======================================================
-        # TECLADO
-        # ======================================================
-
-        if self._is_select_all_request(normalized):
-            return self.commands.select_all()
-
-        if self._is_copy_request(normalized):
-            return self.commands.copy()
-
-        if self._is_paste_request(normalized):
-            return self.commands.paste()
-
-        if self._is_cut_request(normalized):
-            return self.commands.cut()
-
-        if self._is_undo_request(normalized):
-            return self.commands.undo()
-
-        if self._is_redo_request(normalized):
-            return self.commands.redo()
-
-        if self._is_save_request(normalized):
-            return self.commands.save()
-
-        if self._is_new_request(normalized):
-            return self.commands.new()
-
-        if self._is_alt_tab_request(normalized):
-            return self.commands.alt_tab()
-
-        # ======================================================
-        # CONECTIVIDADE — CELULAR / TV
-        # (antes de música/pesquisa: "pausa a música no celular"
-        # deve ir para o celular, não para a mídia do PC)
-        # ======================================================
-
-        connectivity = self._resolve_connectivity_request(normalized)
-        if connectivity is not None:
-            action, kwargs = connectivity
-            if action == "__discover__":
-                return self.commands.discover_devices()
-            if action == "__pc_screenshot__":
-                return self.commands.screenshot_pc()
-            if action == "__phone_screenshot__":
-                return self.commands.connectivity_action(
-                    "screenshot", text=normalized, kind="phone",
-                )
-            return self.commands.connectivity_action(action, text=normalized, **kwargs)
-
-        # ======================================================
-        # FUNK
-        # ======================================================
-
-        if self._is_funk_request(normalized):
-            return self.commands.play_funk()
-
-        # ======================================================
-        # PESQUISA YOUTUBE
-        # ======================================================
-
-        youtube_query = self._extract_search_query(
-            normalized,
-            "youtube"
-        )
-
-        if youtube_query:
-            return self.commands.search_youtube(
-                youtube_query
-            )
-
-        # ======================================================
-        # PESQUISA GOOGLE
-        # ======================================================
-
-        google_query = self._extract_google_query(
-            normalized
-        )
-
-        if google_query:
-            return self.commands.search_google(
-                google_query
-            )
-
-        # ======================================================
-        # SITES
-        # ======================================================
-
-        if self._is_open_request(
-            normalized,
-            (
-                "google",
-                "navegador google",
-            )
-        ):
-            return self.commands.open_google()
-
-        if self._is_open_request(
-            normalized,
-            (
-                "youtube",
-            )
-        ):
-            return self.commands.open_youtube()
-
-        if self._is_open_request(
-            normalized,
-            (
-                "canva",
-            )
-        ):
-            return self.commands.open_canva()
-
-        if self._is_open_request(
-            normalized,
-            (
-                "whatsapp",
-                "whatsapp web",
-            )
-        ):
-            return self.commands.open_whatsapp()
-
-        if self._is_open_request(
-            normalized,
-            (
-                "spotify",
-            )
-        ):
-            return self.commands.open_spotify()
-
-        # ======================================================
-        # PASTAS
-        # ======================================================
-
-        if self._contains_any(
-            normalized,
-            (
-                "documentos",
-                "meus documentos",
-            )
-        ):
-            if self._contains_open_action(normalized):
-                return self.commands.open_documents()
-
-        if self._contains_any(
-            normalized,
-            (
-                "downloads",
-                "meus downloads",
-            )
-        ):
-            if self._contains_open_action(normalized):
-                return self.commands.open_downloads()
-
-        if self._contains_any(
-            normalized,
-            (
-                "desktop",
-                "área de trabalho",
-            )
-        ):
-            if self._contains_open_action(normalized):
-                return self.commands.open_desktop()
-
-        # ======================================================
-        # ABRIR APLICATIVO
-        # ======================================================
-
-        app_name = self._extract_app_name(
-            normalized
-        )
-
-        if app_name:
-
-            app_name = self._normalize_app_name(
-                app_name
-            )
-
-            if app_name == "google":
-                return self.commands.open_google()
-
-            if app_name in {
-                "youtube",
-            }:
-                return self.commands.open_youtube()
-
-            if app_name in {
-                "spotify",
-            }:
-                return self.commands.open_spotify()
-
-            if app_name in {
-                "canva",
-            }:
-                return self.commands.open_canva()
-
-            if app_name in {
-                "whatsapp",
-                "whatsapp web",
-            }:
-                return self.commands.open_whatsapp()
-
-            if app_name in {
-                "documentos",
-                "meus documentos",
-            }:
-                return self.commands.open_documents()
-
-            if app_name in {
-                "downloads",
-                "meus downloads",
-            }:
-                return self.commands.open_downloads()
-
-            if app_name in {
-                "desktop",
-                "área de trabalho",
-            }:
-                return self.commands.open_desktop()
-
-            return self.commands.open_app(
-                app_name
-            )
 
         return None
 
@@ -893,37 +689,52 @@ class VegaCommandsParser:
             "spotif": "spotify",
             "spofity": "spotify",
             "spotifyy": "spotify",
+            "spotfy premium": "spotify",
 
             # Chrome
             "chorme": "chrome",
             "crome": "chrome",
             "cromee": "chrome",
+            "crhome": "chrome",
 
             # Discord
             "discrod": "discord",
             "discor": "discord",
+            "discorde": "discord",
 
             # Steam
             "stema": "steam",
             "steem": "steam",
+            "stima": "steam",
 
             # VS Code
             "vscod": "vscode",
             "vs code": "vscode",
             "visual studio code": "vscode",
+            "visual code": "vscode",
+            "vs cand": "vscode",
 
             # WhatsApp
             "whats app": "whatsapp",
             "what's app": "whatsapp",
             "wpp": "whatsapp",
+            "wap": "whatsapp",
+
+            # YouTube
+            "youtub": "youtube",
+            "you tube": "youtube",
+            "utube": "youtube",
 
             # Outros
             "áudio": "audio",
             "brilho da tela": "brilho",
             "luminosidade": "brilho",
+            "telas": "tela",
 
             "computadorzinho": "pc",
             "computador": "pc",
+            "notebook": "pc",
+            "note": "pc",
 
             # Formas comuns
             "área de trabalho": "área de trabalho",
@@ -1167,18 +978,63 @@ class VegaCommandsParser:
     # CONECTIVIDADE — CELULAR / TV
     # ==========================================================
 
-    _PHONE_WORDS = ("celular", "telefone", "smartphone", "android", "meu phone")
+    # "whatsapp"/"zap" contam como celular: ligar/mandar mensagem por eles é
+    # operar o aparelho, mesmo que a fala não diga "celular".
+    _PHONE_WORDS = (
+        "celular", "telefone", "smartphone", "android", "meu phone",
+        "whatsapp", "whats app", "zap",
+    )
     _TV_WORDS = ("tv", "televisao", "televisor", "chromecast")
     # Palavras que apontam para o PC explicitamente.
     _PC_WORDS = ("computador", "pc", "desktop", "monitor", "meu pc", "no pc")
 
     # Frases que pedem captura de tela (mesma intenção para PC e celular).
+    #
+    # AQUI só entram pedidos de FOTO/PRINT. Pedidos de VER a tela sem citar
+    # dispositivo ("olha minha tela", "me mostra a tela") são tratados em
+    # `_resolve_view_request`, porque o alvo depende do dispositivo citado:
+    #   - "olha minha tela"              -> print da tela do PC (padrão)
+    #   - "olha a tela do celular"       -> espelhar o celular (quer VER, não foto)
+    #   - "print da tela do celular"     -> foto da tela do celular
     _SCREENSHOT_PHRASES = (
         "tira um print", "tira print", "tira um print da tela",
         "tira print da tela", "print da tela", "screenshot",
         "captura a tela", "capturar a tela", "tira uma foto da tela",
         "print",  # cobre "print do celular" e "print do pc"
     )
+
+    # Pedidos de OLHAR a tela (sem a palavra print). Com dispositivo explícito
+    # de celular vão para o espelhamento; sem dispositivo, para a tela do PC.
+    _VIEW_SCREEN_PHRASES = (
+        "olha minha tela", "olha a minha tela", "olha pra minha tela",
+        "olha para a minha tela", "ve minha tela", "ver minha tela",
+        "vê minha tela", "mostra a tela", "mostre a tela",
+        "me mostra a tela", "me mostre a tela", "exibe a tela",
+        "exibir a tela", "o que tem na minha tela", "o que esta na minha tela",
+        "o que aparece na minha tela", "analisa a minha tela",
+        "analisa minha tela", "olha a tela", "olha isso na tela",
+        "olha isso na minha tela", "descreve a tela", "da uma olhada na tela",
+        "quero ver a tela", "deixa eu ver a tela",
+    )
+
+    @classmethod
+    def _resolve_view_request(cls, text):
+        """Traduz um pedido de OLHAR a tela, decidindo o dispositivo.
+
+        Regra pedida pelo usuário (e que evita a confusão anterior, em que
+        "olha minha tela" espelhava o celular):
+
+          - citou celular/telefone -> espelhar o celular (o usuário quer VER);
+          - qualquer outra coisa   -> print da tela do PC (o padrão).
+
+        Retorna None quando a fala não é um pedido de olhar a tela.
+        """
+        if not any(phrase in text for phrase in cls._VIEW_SCREEN_PHRASES):
+            return None
+        device = cls._mentions_device(text)
+        if device == "phone":
+            return ("mirror", {})
+        return ("__pc_screenshot__", {})
 
     # Frases que pedem espelhamento (celular) ou mostrar a tela.
     # "parar" é verificado ANTES, para não casar com "espelhar".
@@ -1189,8 +1045,12 @@ class VegaCommandsParser:
     )
     _MIRROR_PHRASES = (
         "espelha", "espelhar", "espelhamento", "mirror",
-        "me mostra a tela", "mostra a tela", "mostre a tela",
-        "exibe a tela", "exibir a tela", "quero ver a tela",
+        # "deixa eu ver a tela" e "quero ver a tela" ficam FORA: sem citar o
+        # celular, o usuário quer a tela do PC. Só o celular explícito espelha.
+        "deixa eu ver a tela do celular",
+        "quero ver a tela do celular", "ver a tela do celular",
+        "mostra a tela do celular", "mostre a tela do celular",
+        "me mostra a tela do celular", "me mostre a tela do celular",
         "me mostra o celular", "mostra o celular",
     )
 
@@ -1245,7 +1105,24 @@ class VegaCommandsParser:
         if screenshot is not None:
             return screenshot
 
+        # Pedido de OLHAR a tela (sem print): com celular explícito é
+        # espelhamento; sem menção é a tela do PC. O padrão é o PC — antes,
+        # "olha minha tela" espelhava o celular sem o usuário pedir.
+        view = cls._resolve_view_request(text)
+        if view is not None:
+            return view
+
         device = cls._mentions_device(text)
+
+        # Ações do celular que podem ser pedidas SEM dizer "celular":
+        # "liga para a rita pelo meu celular", "responde o miguel".
+        if device == "phone" or cls._looks_like_phone_action(text):
+            reply = cls._extract_reply_request(text)
+            if reply:
+                return ("send_whatsapp" if reply.get("text") else "read_conversation", reply)
+            conversation = cls._extract_conversation_read_request(text)
+            if conversation:
+                return ("read_conversation", conversation)
 
         # Identificação do aparelho: "que celular é esse?", "qual é o meu celular?"
         if device == "phone" and any(phrase in text for phrase in (
@@ -1255,6 +1132,11 @@ class VegaCommandsParser:
             "qual o modelo", "que modelo",
         )):
             return ("identify", {})
+
+        # Pesquisa no YouTube SEM citar dispositivo: fica no PC (página de
+        # resultados no navegador), como sempre foi. Só vai para a TV quando
+        # a fala cita a TV ("pesquisa X no youtube da tv") — regra do usuário:
+        # sem "da tv", não é comando da TV.
 
         # Listagem genérica de dispositivos: não exige escolher celular ou TV.
         if any(word in text for word in ("quais dispositivos", "meus dispositivos",
@@ -1270,6 +1152,15 @@ class VegaCommandsParser:
                 # "parar" precisa vir antes: "para de espelhar" contém "espelhar".
                 if any(phrase in text for phrase in cls._STOP_MIRROR_PHRASES):
                     return ("stop_mirror", {})
+
+                # Respostas e leitura de conversa antes de "mensagem", para
+                # "responde o miguel" não cair no envio genérico.
+                reply = cls._extract_reply_request(text)
+                if reply:
+                    return ("send_whatsapp" if reply.get("text") else "read_conversation", reply)
+                conversation = cls._extract_conversation_read_request(text)
+                if conversation:
+                    return ("read_conversation", conversation)
                 if any(phrase in text for phrase in cls._MIRROR_PHRASES):
                     return ("mirror", {})
                 if any(phrase in text for phrase in ("sem fio", "sem cabo", "wifi", "wi-fi",
@@ -1333,10 +1224,29 @@ class VegaCommandsParser:
                 if message:
                     return ("send_message", message)
 
-                if "pausa" in text or "pause" in text:
+                if any(word in text for word in ("pausa", "pause")):
                     return ("media_pause", {})
-                if "próxima" in text or "proxima" in text or "pula" in text:
+                if any(word in text for word in ("próxima", "proxima", "pula", "avança", "avanca")):
                     return ("media_next", {})
+                if any(word in text for word in ("anterior", "volta uma", "voltar uma")):
+                    return ("media_previous", {})
+                if any(word in text for word in ("para a mídia", "para mídia", "pare a mídia", "stop na mídia")):
+                    return ("media_stop", {})
+                # ---- Pesquisa na web NO CELULAR ----
+                # "pesquise sobre eleições no celular" precisa abrir a busca
+                # no aparelho, não no Google do PC. Roda antes de tudo o que
+                # possa capturar a fala como pesquisa genérica do computador.
+                search_query = cls._extract_phone_search_query(text)
+                if search_query:
+                    return ("search_web", {"query": search_query})
+
+                # ---- Música no celular ----
+                # "toca menos é mais no spotify no celular" deve TOCAR, não só
+                # abrir o app.
+                music_query, music_platform = cls._extract_phone_music_request(text)
+                if music_query:
+                    return ("play_music", {"query": music_query, "platform": music_platform})
+
                 app = cls._extract_phone_app(text)
                 if app:
                     return ("open_app", {"app": app})
@@ -1348,19 +1258,81 @@ class VegaCommandsParser:
                     return ("list", {})
 
             if device == "tv":
+                # ---- Ligar a TV (antes de "liga" virar outra coisa).
+                # Regex com fronteira: "desliga a tv" contém "liga a tv".
+                if re.search(r"\b(?:liga|acende|acorda)\s+(?:a|o)\s+"
+                             r"(?:tv|televisao|televisão|televisor)\b", text):
+                    return ("wake_on", {})
+                # ---- Volume (primeiro: "coloca o volume da tv em 40%" NÃO é
+                #      um pedido de mídia, apesar do verbo "coloca") ----
+                if any(word in text for word in ("muta", "mutar", "mudo", "sem som", "tira o som")):
+                    return ("volume", {"level": 0.0})
+                level = cls._extract_volume_level(text)
+                if level is not None:
+                    return ("volume", {"level": level})
+                # Aumentar/diminuir sem valor explícito vira um passo (delta).
+                if any(word in text for word in ("aumenta", "aumentar", "sobe", "subir",
+                                                 "levanta", "mais alto", "mais volume")):
+                    return ("volume", {"delta": 0.1})
+                if any(word in text for word in ("abaixa", "abaixar", "diminui", "diminuir",
+                                                 "baixa", "baixar", "desce", "menos volume",
+                                                 "mais baixo")):
+                    return ("volume", {"delta": -0.1})
+                if "volume" in text or "som" in text:
+                    return ("volume", {})
+                # ---- Enviar mídia / controle de reprodução ----
+                # Enviar um vídeo/link direto para a TV.
+                url = getattr(cls, "_pending_media_url", "")
+                if url:
+                    return ("play_url", {"url": url})
+                # ---- Spotify da TV: "toca X no spotify da tv" ----
+                if "spotify" in text and any(word in text for word in (
+                        "toca", "tocar", "toque", "passa", "passar", "coloca",
+                        "coloque", "manda", "manda", "envia", "reproduz", "ouvir",
+                        "ouca", "queria ouvir")):
+                    query = cls._extract_tv_spotify_query(text)
+                    if query:
+                        return ("play_spotify", {"query": query})
+                # ---- Apps da TV: "abre o netflix na tv" ----
+                app = cls._extract_tv_app(text)
+                if app:
+                    return ("open_app", {"app": app})
+                # ---- Pesquisar (sem tocar) no YouTube da TV ----
+                if "youtube" in text and any(word in text for word in (
+                        "pesquisa", "pesquisar", "busca", "buscar", "procura", "procurar")):
+                    query = cls._extract_tv_youtube_query(text)
+                    return ("search_youtube", {"query": query})
+                # ---- Tocar vídeo no YouTube da TV (app, de verdade) ----
+                youtube_query = cls._extract_tv_youtube_query(text)
+                if youtube_query:
+                    return ("play_youtube", {"query": youtube_query})
+                # Pedido de tocar "algo" na TV sem dizer o quê: pede o conteúdo
+                # em vez de cair no YouTube Music do PC.
+                if any(word in text for word in ("toca", "tocar", "toque", "passa",
+                                                 "passar", "joga", "jogar", "reproduz",
+                                                 "reproduzir", "video", "vídeo", "filme",
+                                                 "musica", "música", "clip", "clipe")):
+                    return ("play_youtube", {})
                 if any(word in text for word in ("pausa", "pause")):
                     return ("pause", {})
+                # ---- Teclas do controle: "aperte enter na tv" ----
+                if any(word in text for word in ("aperte", "apertar", "pressione",
+                                                 "press", "clica", "clicar")):
+                    for key in ("enter", "ok", "cima", "up", "baixo", "down",
+                                "esquerda", "left", "direita", "right",
+                                "voltar", "back", "sair", "exit",
+                                "home", "inicio", "menu", "info"):
+                        if key in text:
+                            return ("key", {"key": key})
+                    return ("key", {})
                 if any(word in text for word in ("retoma", "continua", "volta a tocar", "play")):
                     return ("resume", {})
+                if "volta" in text or "voltar" in text:
+                    return ("key", {"key": "voltar"})
                 if any(word in text for word in ("para a", "parar", "stop")):
                     return ("stop", {})
                 if any(word in text for word in ("desliga", "desligar", "turn off")):
                     return ("turn_off", {})
-                level = cls._extract_volume_level(text)
-                if level is not None:
-                    return ("volume", {"level": level})
-                if "volume" in text or "som" in text:
-                    return ("volume", {})
                 if any(word in text for word in ("conecta", "conectar", "procura",
                                                  "liga a tv", "status da tv")):
                     return ("list", {})
@@ -1371,6 +1343,28 @@ class VegaCommandsParser:
             return ("__discover__", {})
 
         return None
+
+    @classmethod
+    def _looks_like_phone_action(cls, text):
+        """Reconhece ações do celular mesmo sem a palavra "celular" na fala.
+
+        Ex.: "liga para a rita pelo meu celular", "responde o miguel",
+        "manda mensagem pro joao no zap".
+        """
+        if not text:
+            return False
+        if cls._extract_call_request(text):
+            return True
+        if cls._extract_reply_request(text):
+            return True
+        if cls._extract_conversation_read_request(text):
+            return True
+        if re.search(r"\b(?:whatsapp|whats|zap)\b", text) and re.search(
+            r"\b(?:manda|mandar|envia|enviar|escreve|escrever|responde|responder|le|ler|leia)\b",
+            text,
+        ):
+            return True
+        return False
 
     @staticmethod
     def _extract_phone_app(text):
@@ -1386,6 +1380,88 @@ class VegaCommandsParser:
         # Remove palavras de recheio.
         app = re.sub(r"^(?:o|a|app)\s+", "", app).strip()
         return app
+
+    # Verbos de pesquisa que podem iniciar um pedido na web.
+    _SEARCH_VERBS = (
+        "pesquise", "pesquisa", "pesquisar", "busque", "busca", "buscar",
+        "procure", "procura", "procurar",
+    )
+
+    @classmethod
+    def _extract_phone_search_query(cls, text):
+        """Extrai a busca de "pesquise sobre eleições no celular".
+
+        Só devolve algo quando a fala cita o celular E um verbo de pesquisa:
+        assim "abre o instagram no celular" não vira pesquisa, e "pesquisa X"
+        sem dispositivo continua indo para o PC (comportamento esperado).
+        """
+        if not text or not cls._looks_like_phone_action(text):
+            # Pesquisa não é "phone action" pelo nome, então checa o verbo aqui.
+            pass
+
+        if not any(re.search(rf"\b{verb}\b", text) for verb in cls._SEARCH_VERBS):
+            return ""
+
+        # Precisa citar o celular explicitamente.
+        if not any(word in text for word in cls._PHONE_WORDS):
+            return ""
+
+        # Remove o verbo inicial e os conectivos.
+        cleaned = text
+        for verb in cls._SEARCH_VERBS:
+            cleaned = re.sub(rf"\b{verb}\b", " ", cleaned, count=1)
+        cleaned = re.sub(r"^\s*(?:por|sobre|de|do|da|no|na|o|a)\s+", " ", cleaned)
+
+        # Remove a menção ao aparelho (e preposições que sobrarem).
+        cleaned = re.sub(
+            r"\s+(?:no|na|do|da|pelo|pela|para\s+o|para\s+a|pro|pra)?\s*"
+            r"(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone|android)\s*$",
+            " ",
+            cleaned,
+        )
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.!")
+        return cleaned
+
+    @classmethod
+    def _extract_phone_music_request(cls, text):
+        """Extrai (query, platform) de "toca X no spotify no celular".
+
+        Devolve ("", "") quando não é um pedido de música no celular.
+        """
+        if not text:
+            return "", ""
+
+        verbs = ("toca", "tocar", "toque", "passa", "passar", "coloca",
+                 "coloque", "bota", "bote", "reproduz", "reproduzir")
+        if not any(re.search(rf"\b{verb}\b", text) for verb in verbs):
+            return "", ""
+
+        if not any(word in text for word in cls._PHONE_WORDS):
+            return "", ""
+
+        # Precisa de "spotify"/"música" para não confundir com abrir app.
+        if "spotify" not in text and "musica" not in text and "música" not in text:
+            return "", ""
+
+        platform = "spotify" if "spotify" in text else "youtube"
+
+        cleaned = text
+        for verb in verbs:
+            cleaned = re.sub(rf"\b{verb}\b", " ", cleaned, count=1)
+
+        # Remove "no spotify", "no youtube" etc.
+        cleaned = re.sub(r"\b(?:no|na)\s+(?:spotify|youtube|deezer)\b", " ", cleaned)
+        # Remove "no celular" e similares (com preposições residuais).
+        cleaned = re.sub(
+            r"\s+(?:no|na|do|da|pelo|pela|para\s+o|para\s+a|pro|pra)?\s*"
+            r"(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone|android)\s*$",
+            " ",
+            cleaned,
+        )
+        # Remove artigos e recheio do começo.
+        cleaned = re.sub(r"^\s*(?:o|a|os|as|um|uma|musica|música|a\s+musica|a\s+música)\s+", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.!")
+        return cleaned, platform
 
     @staticmethod
     def _extract_file_to_send(text):
@@ -1417,14 +1493,135 @@ class VegaCommandsParser:
 
     @staticmethod
     def _extract_volume_level(text):
-        """Extrai um volume em % de "coloca o volume da tv em 40%" -> 0.4."""
-        match = re.search(r"(\d{1,3})\s*(?:%|por cento)?", text)
+        """Extrai um volume em % de "coloca o volume da tv em 40%" -> 0.4.
+
+        Só aceita números com contexto de volume (% / "por cento" / próximo
+        de "volume" ou "som"). Antes, qualquer número no texto virava volume:
+        "joga ...video.mp4 na tv" era lido como volume 4%, e o pedido de
+        vídeo nunca chegava à TV.
+        """
+        # Remove URLs e extensões para não confundir "mp4"/"1080p" com volume.
+        cleaned = re.sub(r"https?://\S+", " ", text)
+        cleaned = re.sub(r"\b\d{3,4}p\b", " ", cleaned)
+
+        match = re.search(r"(\d{1,3})\s*(?:%|por cento)", cleaned)
+        if not match:
+            match = re.search(
+                r"\b(?:volume|som)\b[^\d]{0,20}?(\d{1,3})\b",
+                cleaned,
+            )
+        if not match:
+            match = re.search(
+                r"\b(\d{1,3})\b[^\d]{0,20}?(?:volume|som)\b",
+                cleaned,
+            )
         if not match:
             return None
         value = int(match.group(1))
         if value > 100:
             return None
         return value / 100.0
+
+    @classmethod
+    def _extract_tv_app(cls, text):
+        """Extrai o app pedido para a TV: "abre o netflix na tv" -> "netflix".
+
+        Só casa quando há verbo de abrir + um app conhecido + a TV na frase.
+        """
+        match = re.search(
+            r"\b(?:abre|abrir|abra|executa|executar|inicia|iniciar|quer ver|"
+            r"quero ver)\s+(?:o\s+|a\s+|no\s+|na\s+)?([a-z0-9\s]+?)(?:\s+(?:na|no|em)\s+(?:tv|televisao|televisor)|\s+(?:na|no)\s+tv)?$",
+            text,
+        )
+        if not match:
+            return ""
+        candidate = match.group(1).strip(" ,.!")
+        if not candidate:
+            return ""
+        # Reconhece apelidos conhecidos (netflix, youtube, spotify, hbo...).
+        from core.connectivity.tv import TVConnector
+        app_id, resolved = TVConnector.resolve_tv_app(candidate)
+        return resolved if app_id else ""
+
+    @staticmethod
+    def _extract_media_url(text):
+        """Extrai um link de vídeo/áudio para enviar à TV.
+
+        A URL completa (com o esquema http/https) é preservada; por isso
+        usamos o texto ORIGINAL e não o normalizado, que remove a pontuação.
+        """
+        match = re.search(r"https?://\S+", str(text or ""))
+        if not match:
+            return ""
+        return match.group(0).rstrip(".,;!?")
+
+    @staticmethod
+    def _youtube_search_url(query):
+        """Monta a URL de resultado do YouTube para o Cast abrir o vídeo."""
+        from urllib.parse import quote_plus
+        return "https://www.youtube.com/results?search_query=" + quote_plus(query)
+
+    @classmethod
+    def _extract_tv_youtube_query(cls, text):
+        """Extrai o que tocar na TV: "toca X na tv", "passa o video X na tv".
+
+        Devolve a busca (sem as palavras de comando e sem "na tv"), ou "".
+        """
+        if not text:
+            return ""
+        # Precisa ser um pedido de reprodução/envio/pesquisa.
+        verbs = ("toca", "tocar", "toque", "passa", "passar", "joga", "jogar",
+                 "manda", "mandar", "envia", "enviar", "coloca", "coloque", "colocar",
+                 "abre", "abrir", "mostra", "mostrar", "reproduz", "reproduzir",
+                 "pesquisa", "pesquise", "pesquisar", "busca", "busque", "buscar",
+                 "procura", "procure", "procurar")
+        if not any(re.search(rf"\b{verb}\b", text) for verb in verbs):
+            return ""
+
+        # Remove o verbo inicial, o destino ("na tv") e palavras de recheio.
+        cleaned = re.sub(
+            r"\b(?:toca|tocar|toque|passa|passar|joga|jogar|manda|mandar|envia|enviar|"
+            r"coloca|coloque|colocar|abre|abrir|mostra|mostrar|reproduz|reproduzir|"
+            r"pesquisa|pesquise|pesquisar|busca|busque|buscar|procura|procure|procurar)\b",
+            " ",
+            text,
+        )
+        cleaned = re.sub(
+            r"\b(?:na|no|para a|para a|pra|pro|pela|pelo)\s+(?:minha\s+|meu\s+)?"
+            r"(?:tv|televisao|televisor|chromecast|youtube)\b",
+            " ",
+            cleaned,
+        )
+        cleaned = re.sub(r"\b(?:o|a|os|as|um|uma|esse|essa|este|esta|video|vídeo|musica|música|filme|clip|clipe)\b", " ", cleaned)
+        # Conectivos residuais de fala natural: "pesquisa POR lofi", "toca "
+        # "MUSICA DE" X etc.
+        cleaned = re.sub(r"^\s*(?:por|sobre|de|do|da)\s+", " ", cleaned)
+        # Resíduo de "...no youtube da tv": a expressão acima remove o bloco
+        # "no youtube" e sobra "da tv" no fim.
+        cleaned = re.sub(r"\s+(?:da|do|na|no)?\s*(?:tv|televisao|televisor)\s*$", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.!")
+        return cleaned
+
+    @classmethod
+    def _extract_tv_spotify_query(cls, text):
+        """Extrai a busca do Spotify da TV: "toca menos e mais no spotify da tv".
+
+        Retorna o termo (sem "no spotify da tv"), ou "".
+        """
+        if not text or "spotify" not in text:
+            return ""
+        match = re.search(
+            r"\b(?:toca|tocar|toque|passa|passar|coloca|coloque|manda|mandar|"
+            r"envia|enviar|reproduz|reproduzir|ouca|ouvir|queria ouvir|quero ouvir)\s+"
+            r"(.+?)\s+(?:no|na)\s+spotify(?:\s+(?:da|do)\s+(?:tv|televisao|televisor))?\s*$",
+            text,
+        )
+        if not match:
+            return ""
+        query = match.group(1).strip(" ,.!")
+        # Remove artigos/recheio comuns no início da busca.
+        query = re.sub(r"^(?:o|a|os|as|um|uma|musica|música|banda|cantor|cantora)\s+", "", query)
+        return query.strip(" ,.!")
 
     @staticmethod
     def _extract_alarm_request(text):
@@ -1471,29 +1668,108 @@ class VegaCommandsParser:
 
         return {"hour": hour, "minute": minute, "label": "VEGA"}
 
-    @staticmethod
-    def _extract_call_request(text):
-        """Extrai (contact|number) de "liga pro joao no celular"."""
+    # Meios que ainda são "ligar": telefone comum, WhatsApp ou chamada de voz.
+    _CALL_MEDIA = r"(?:whatsapp|whats|zap|telefone|celular|ligacao|ligação|voz)"
+
+    @classmethod
+    def _extract_call_request(cls, text):
+        """Extrai (contact|number) de "liga pro joao no celular".
+
+        Aceita também "liga para a rita pelo meu celular", "chama o joao no
+        whatsapp" e "liga para a rita no whatsapp pelo celular".
+        """
+        # O alvo pode vir antes do meio ("... pelo meu celular") ou depois
+        # ("... no whatsapp pelo celular").
+        media = rf"(?:no|na|pelo|pela|por|do|da|via)\s+(?:meu\s+|minha\s+)?{cls._CALL_MEDIA}"
         match = re.search(
-            r"(?:liga|ligar|ligue|disque|discar|chama|chamar)\s+"
-            r"(?:para\s+o\s+|para\s+a\s+|pro\s+|pra\s+|o\s+|a\s+)?"
-            r"([\w\s]+?)\s+(?:no|pelo|do)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|smartphone)",
+            rf"(?:liga|ligar|ligue|disque|discar|chama|chamar|telefona|telefonar)\s+"
+            rf"(?:para\s+o\s+|para\s+a\s+|para\s+|pro\s+|pra\s+|o\s+|a\s+)?"
+            rf"([\w\s]+?)\s+{media}",
             text,
         )
         if not match:
             return None
+
         target = match.group(1).strip(" ,.!")
         if not target:
             return None
 
+        # Remove o nome do app quando ele ficou grudado no contato
+        # ("chama o miguel no whatsapp" -> "miguel").
+        target = re.sub(
+            r"\s+(?:no|na|pelo|pela|por|do|da|via)\s+(?:meu\s+|minha\s+)?"
+            rf"{cls._CALL_MEDIA}\s*$",
+            "",
+            target,
+        ).strip(" ,.!")
+        if not target:
+            return None
+
+        # Meio da chamada: WhatsApp quando citado, senão telefone comum.
+        app = "whatsapp" if re.search(r"whatsapp|whats|zap", text) else ""
+
         # Número explícito?
         if re.fullmatch(r"[\d\s()+-]{4,}", target):
-            return {"number": target}
-        return {"contact": target}
+            return {"number": target, "app": app}
+        return {"contact": target, "app": app}
+
+    @staticmethod
+    def _extract_reply_request(text):
+        """Extrai (contact, text) de "responde o miguel" ou "responde o miguel dizendo que eu vou".
+
+        Sem o conteúdo, a VEGA lê a última mensagem e propõe uma resposta;
+        com "dizendo que...", o conteúdo é o que o usuário falou.
+        """
+        match = re.search(
+            r"(?:responde|responder|resposta\s+para|responde\s+para)\s+"
+            r"(?:o\s+|a\s+|para\s+o\s+|para\s+a\s+|pro\s+|pra\s+)?"
+            r"([\w\s]+?)"
+            r"(?:\s+(?:dizendo|falando|escrito)\s+(?:que\s+)?(.+?))?$",
+            text,
+        )
+        if not match:
+            return None
+        contact = match.group(1).strip(" ,.!")
+        if not contact:
+            return None
+        # "responde o miguel no celular" -> o meio não faz parte do nome.
+        contact = re.sub(
+            r"\s+(?:no|na|pelo|pela|por|do|da|via)\s+(?:meu\s+|minha\s+)?"
+            r"(?:celular|telefone|smartphone|android|whatsapp|whats|zap)\s*$",
+            "",
+            contact,
+        ).strip(" ,.!")
+        if not contact:
+            return None
+        message = (match.group(2) or "").strip(" ,.!")
+        return {"contact": contact, "text": message}
+
+    @staticmethod
+    def _extract_conversation_read_request(text):
+        """Extrai o contato de "o que o miguel me mandou?" / "le as mensagens do miguel"."""
+        patterns = (
+            r"(?:o\s+que|quais)\s+(?:o\s+|a\s+)?([\w\s]+?)\s+(?:me\s+)?(?:mandou|manda|escreveu|enviou)",
+            r"(?:le|ler|leia|mostra|mostre|ver)\s+(?:as\s+)?(?:mensagens|msgs|conversas?)\s+(?:do|da|de)\s+([\w\s]+?)$",
+            r"(?:mensagens|msgs)\s+(?:do|da|de)\s+([\w\s]+?)$",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if not match:
+                continue
+            contact = match.group(1).strip(" ,.!?")
+            if contact:
+                return {"contact": contact}
+        return None
 
     @staticmethod
     def _extract_message_request(text):
-        """Extrai (contact, text) de "manda mensagem pro joao dizendo que eu vou"."""
+        """Extrai (contact, text) de "manda mensagem pro joao dizendo que eu vou".
+
+        O texto da mensagem é OPCIONAL: "manda mensagem pro joao no whatsapp"
+        (sem conteúdo) devolve o contato com text="" e a VEGA pergunta o que
+        escrever. Antes, sem "dizendo...", o pedido era ignorado por inteiro
+        e a fala ia para a IA — a VEGA fingia que não ouviu.
+        """
         match = re.search(
             r"(?:manda|mandar|envia|enviar|escreve|escrever)\s+"
             r"(?:uma\s+)?(?:mensagem|msg|zap)\s+"
@@ -1503,13 +1779,28 @@ class VegaCommandsParser:
             r"(?:\s+(?:no|pelo|do)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|whatsapp|zap|smartphone))?$",
             text,
         )
-        if not match:
-            return None
-        contact = match.group(1).strip(" ,.!")
-        message = match.group(2).strip(" ,.!")
-        if not contact or not message:
-            return None
-        return {"contact": contact, "text": message}
+        if match:
+            contact = match.group(1).strip(" ,.!")
+            message = match.group(2).strip(" ,.!")
+            if contact and message:
+                return {"contact": contact, "text": message}
+
+        # Sem o texto: captura o destinatário e deixa a VEGA perguntar o que
+        # escrever ("manda mensagem pro joao no whatsapp").
+        match = re.search(
+            r"(?:manda|mandar|envia|enviar|escreve|escrever)\s+"
+            r"(?:uma\s+)?(?:mensagem|msg|zap)\s+"
+            r"(?:para\s+o\s+|para\s+a\s+|pro\s+|pra\s+|ao\s+|a\s+)?"
+            r"([\w\s]+?)\s*"
+            r"(?:\s+(?:no|pelo|do)\s+(?:meu\s+|minha\s+)?(?:celular|telefone|whatsapp|zap|smartphone))?$",
+            text,
+        )
+        if match:
+            contact = match.group(1).strip(" ,.!")
+            # Sem destinatário ("manda mensagem no whatsapp"): nem entra.
+            if contact and contact.lower() not in {"no", "pelo", "no meu"}:
+                return {"contact": contact, "text": ""}
+        return None
 
     # ==========================================================
     # MÚSICA — TOCAR MÚSICA/PLAYLIST ESPECÍFICA
@@ -1604,8 +1895,12 @@ class VegaCommandsParser:
                 query = re.sub(r"\s+(por favor|ai|aí|pra mim|para mim)$", "", query).strip()
                 # Remove artigos/preposições iniciais residuais ("de funk" -> "funk", "do alok" -> "alok")
                 query = re.sub(r"^(?:de|da|do|das|dos)\s+", "", query).strip()
-                if query:
-                    return (query, platform, playlist)
+                if not query:
+                    # "toca no youtube" sem faixa: é um pedido de música na
+                    # plataforma, não uma faixa chamada "no youtube". O
+                    # play_music pergunta o que tocar quando a query vem vazia.
+                    return ("", platform, playlist)
+                return (query, platform, playlist)
 
         return None
 
@@ -1942,6 +2237,31 @@ class VegaCommandsParser:
     def _is_brightness_up_request(text):
 
         if "brilho" not in text:
+            # Formas naturais que NÃO dizem "brilho" e por isso escapavam para
+            # a IA — que então respondia sobre outra coisa ("mais claro" era
+            # interpretado como clima). Aqui elas são reconhecidas localmente,
+            # de graça e sem ambiguidade.
+            if VegaCommandsParser._contains_any(
+                text,
+                (
+                    "mais claro",
+                    "mais clara",
+                    "deixa claro",
+                    "deixa mais claro",
+                    "deixa a tela mais clara",
+                    "aumenta a luz",
+                    "aumenta a claridade",
+                    "mais luminosidade",
+                    "mais iluminado",
+                ),
+            ):
+                # "claro" também significa tempo bonito: exige contexto de tela/pc.
+                if VegaCommandsParser._contains_any(
+                    text, ("tela", "pc", "computador", "monitor", "aqui", "notebook")
+                ) or VegaCommandsParser._contains_any(
+                    text, ("deixa mais claro", "mais claro", "mais clara")
+                ):
+                    return True
             return False
 
         return VegaCommandsParser._contains_any(
@@ -1962,6 +2282,23 @@ class VegaCommandsParser:
     def _is_brightness_down_request(text):
 
         if "brilho" not in text:
+            if VegaCommandsParser._contains_any(
+                text,
+                (
+                    "mais escuro",
+                    "mais escura",
+                    "escurece a tela",
+                    "deixa mais escuro",
+                    "menos luz",
+                    "menos luminosidade",
+                ),
+            ):
+                if VegaCommandsParser._contains_any(
+                    text, ("tela", "pc", "computador", "monitor", "aqui", "notebook")
+                ) or VegaCommandsParser._contains_any(
+                    text, ("deixa mais escuro", "mais escuro", "mais escura")
+                ):
+                    return True
             return False
 
         return VegaCommandsParser._contains_any(
@@ -1976,7 +2313,7 @@ class VegaCommandsParser:
                 "escurece",
                 "escurecer",
                 "diminua",
-            )
+            ),
         )
 
     @staticmethod

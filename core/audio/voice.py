@@ -1,10 +1,25 @@
 import re
 import time
 from collections import deque
+from dataclasses import dataclass, field
 
 import numpy as np
 import sounddevice as sd
 import speech_recognition as sr
+
+
+@dataclass
+class _ListenContext:
+    """Estado do ciclo de escuta do `listen` (fases espera/falando)."""
+
+    recorded: list = field(default_factory=list)
+    pre_roll: deque = field(default_factory=deque)
+    speaking: bool = False
+    speech_start: float | None = None
+    last_voice_time: float | None = None
+    trigger_blocks: int = 0
+    start_time: float = 0.0
+    duration: float | None = None
 
 
 class VegaVoice:
@@ -33,9 +48,13 @@ class VegaVoice:
         self.recognizer.energy_threshold = 180
         self.recognizer.dynamic_energy_threshold = True
 
-        self.recognizer.pause_threshold = 0.38
+        # `pause_threshold` é o silêncio que o reconhecedor aceita DENTRO de
+        # uma frase. Em 0.38s a VEGA cortava a pessoa no meio ("...o que você
+        # está vendo" chegava como "o que você"). 0.7s dá tempo de respirar
+        # sem esperar demais entre turnos.
+        self.recognizer.pause_threshold = 0.70
         self.recognizer.phrase_threshold = 0.06
-        self.recognizer.non_speaking_duration = 0.08
+        self.recognizer.non_speaking_duration = 0.20
 
         # ==========================================================
         # DETECÇÃO DE FALA
@@ -49,17 +68,25 @@ class VegaVoice:
         self.silence_threshold = 120
 
         # Tempo de silêncio necessário para considerar
-        # que o usuário terminou de falar.
-        self.silence_duration = 0.40
+        # que o usuário terminou de falar. Antes (0.40s) a pausa natural de
+        # respiração era lida como fim de turno e a fala era cortada.
+        # 0.85s é curto o bastante para não travar a conversa e longo o
+        # bastante para esperar uma frase completa.
+        self.silence_duration = 0.85
 
         # Limites de segurança.
-        self.max_duration = 9.0
+        # `max_duration` era 9.0s: pedidos longos ("pesquise sobre as eleições
+        # de 2026 no celular e me manda o resultado") eram cortados. 14s cabe
+        # uma frase longa sem risco de gravar minutos de silêncio.
+        self.max_duration = 14.0
         self.start_timeout = 4.5
 
         # Preserve a small portion of audio that comes before speech is
         # detected. This keeps the first consonant of a short word.
         self.pre_roll_duration = 0.32
-        self.minimum_speech_duration = 0.28
+        # 0.28s descartava respostas curtas ("sim", "não", "toca"). 0.18s
+        # ainda ignora estalos e tose, mas preserva uma palavra curta.
+        self.minimum_speech_duration = 0.18
         self.start_trigger_count = 2
         self._noise_floor = 0.0
 
@@ -102,246 +129,179 @@ class VegaVoice:
         output_active=None,
         stop_waiting=None,
     ):
+        """Escuta até captar uma frase e devolve o texto transcrito.
+
+        Estrutura (antes era um bloco único com 8 níveis de aninhamento):
+        - o loop de captação só decide ENTRE fases; cada fase é um método:
+            * `_waiting_state`   — espera o usuário começar a falar;
+            * `_speaking_state`  — grava enquanto fala e decide o fim.
+        """
 
         if not self.enabled:
             time.sleep(0.05)
             return None
 
-        block_size = int(
-            self.sample_rate * self.block_duration
+        block_size = int(self.sample_rate * self.block_duration)
+
+        ctx = _ListenContext(
+            recorded=[],
+            pre_roll=deque(maxlen=max(1, int(self.pre_roll_duration / self.block_duration))),
+            speaking=False,
+            speech_start=None,
+            last_voice_time=None,
+            trigger_blocks=0,
+            start_time=time.time(),
+            duration=duration,
         )
-
-        recorded_blocks = []
-
-        pre_roll_blocks = deque(
-            maxlen=max(
-                1,
-                int(self.pre_roll_duration / self.block_duration)
-            )
-        )
-
-        speaking = False
-        speech_start = None
-        last_voice_time = None
-        trigger_blocks = 0
-
-        start_time = time.time()
 
         try:
-
             with sd.InputStream(
                 samplerate=self.sample_rate,
                 channels=self.channels,
                 dtype="int16",
                 device=self.microphone_index,
-                blocksize=block_size
+                blocksize=block_size,
             ) as stream:
-
                 while True:
-
                     data, _ = stream.read(block_size)
-
-                    audio_block = np.asarray(
-                        data
-                    ).flatten()
-
-                    level = self._audio_level(
-                        audio_block
-                    )
-
+                    audio_block = np.asarray(data).flatten()
+                    level = self._audio_level(audio_block)
                     current_time = time.time()
 
-                    # ==================================================
-                    # ESPERANDO O USUÁRIO COMEÇAR A FALAR
-                    # ==================================================
-
-                    if not speaking:
-
-                        if stop_waiting is not None:
-                            try:
-                                if stop_waiting():
-                                    return None
-                            except Exception:
-                                pass
-
-                        # Update the ambient baseline only while waiting for
-                        # speech, then derive thresholds that work in both a
-                        # quiet room and with a fan/PC in the background.
-                        if self._noise_floor <= 0.0:
-                            self._noise_floor = level
-                        else:
-                            self._noise_floor = (
-                                self._noise_floor * 0.92
-                                + level * 0.08
-                            )
-
-                        start_threshold = max(
-                            self.start_threshold,
-                            self._noise_floor * 2.8,
+                    if not ctx.speaking:
+                        action = self._waiting_state(
+                            audio_block, level, current_time, ctx,
+                            stop_waiting, on_speech_start, barge_in, output_active,
                         )
-                        if barge_in and output_active is not None:
-                            try:
-                                if output_active():
-                                    start_threshold = max(
-                                        start_threshold * 2.5,
-                                        self.start_threshold * 3.0,
-                                        self._noise_floor * 3.8,
-                                    )
-                            except Exception:
-                                pass
-
-                        if level >= start_threshold:
-                            trigger_blocks += 1
-                            if trigger_blocks >= self.start_trigger_count:
-                                speaking = True
-
-                                speech_start = current_time
-                                last_voice_time = current_time
-
-                                recorded_blocks.extend(pre_roll_blocks)
-                                recorded_blocks.append(
-                                    audio_block.copy()
-                                )
-                                if on_speech_start is not None:
-                                    try:
-                                        on_speech_start()
-                                    except Exception:
-                                        pass
-
-                                continue
-                        else:
-                            trigger_blocks = 0
-
-                        pre_roll_blocks.append(
-                            audio_block.copy()
+                    else:
+                        action = self._speaking_state(
+                            audio_block, level, current_time, ctx, level_callback,
                         )
 
-                        # ------------------------------------------------
-                        # DURAÇÃO ESPECÍFICA
-                        # ------------------------------------------------
-
-                        if duration is not None:
-
-                            if (
-                                current_time - start_time
-                                >= duration
-                            ):
-                                return None
-
-                        # ------------------------------------------------
-                        # TIMEOUT
-                        # ------------------------------------------------
-
-                        elif (
-                            current_time - start_time
-                            >= self.start_timeout
-                        ):
-                            return None
-
-                        continue
-
-                    # ==================================================
-                    # USUÁRIO ESTÁ FALANDO
-                    # ==================================================
-
-                    recorded_blocks.append(
-                        audio_block.copy()
-                    )
-
-                    # ==================================================
-                    # DETECTAR VOZ
-                    # ==================================================
-
-                    silence_threshold = max(
-                        self.silence_threshold,
-                        self._noise_floor * 1.35
-                    )
-
-                    if level >= silence_threshold:
-
-                        last_voice_time = current_time
-
-                    if level_callback is not None:
-                        try:
-                            level_callback(level)
-                        except Exception:
-                            pass
-
-                    # ==================================================
-                    # DETECTAR FIM DA FRASE
-                    # ==================================================
-
-                    if (
-                        last_voice_time is not None
-                        and current_time - last_voice_time
-                        >= self.silence_duration
-                        and current_time - speech_start
-                        >= self.minimum_speech_duration
-                    ):
-
+                    if action == "return":
+                        return None
+                    if action == "break":
                         break
-
-                    # ==================================================
-                    # LIMITE MÁXIMO
-                    # ==================================================
-
-                    if (
-                        speech_start is not None
-                        and current_time - speech_start
-                        >= self.max_duration
-                    ):
-
-                        break
-
         except Exception as error:
+            raise RuntimeError(f"Erro no microfone: {error}")
 
-            raise RuntimeError(
-                f"Erro no microfone: {error}"
-            )
+        return self._finish_recording(ctx.recorded)
 
-        # ==========================================================
-        # NENHUM ÁUDIO
-        # ==========================================================
+    # ==========================================================
+    # ESTADO: ESPERANDO O USUÁRIO COMEÇAR A FALAR
+    # ==========================================================
 
+    def _waiting_state(self, audio_block, level, current_time, ctx,
+                       stop_waiting, on_speech_start, barge_in, output_active):
+        """Fase de espera. Devolve 'return', 'break' ou None (continuar)."""
+        if stop_waiting is not None:
+            try:
+                if stop_waiting():
+                    return "return"
+            except Exception:
+                pass
+
+        # Baseline do ruído ambiente: derivada só enquanto se espera falar,
+        # funciona em sala silenciosa e com ventilador/PC ao fundo.
+        if self._noise_floor <= 0.0:
+            self._noise_floor = level
+        else:
+            self._noise_floor = self._noise_floor * 0.92 + level * 0.08
+
+        start_threshold = max(self.start_threshold, self._noise_floor * 2.8)
+        if barge_in and output_active is not None:
+            try:
+                if output_active():
+                    start_threshold = max(
+                        start_threshold * 2.5,
+                        self.start_threshold * 3.0,
+                        self._noise_floor * 3.8,
+                    )
+            except Exception:
+                pass
+
+        if level >= start_threshold:
+            ctx.trigger_blocks += 1
+            if ctx.trigger_blocks >= self.start_trigger_count:
+                # O usuário começou a falar: muda de fase e grava o bloco
+                # atual junto com o pré-roll (áudio anterior ao disparo).
+                ctx.speaking = True
+                ctx.speech_start = current_time
+                ctx.last_voice_time = current_time
+                ctx.recorded.extend(ctx.pre_roll)
+                ctx.recorded.append(audio_block.copy())
+                if on_speech_start is not None:
+                    try:
+                        on_speech_start()
+                    except Exception:
+                        pass
+                return None
+        else:
+            ctx.trigger_blocks = 0
+
+        ctx.pre_roll.append(audio_block.copy())
+
+        # Duração específica ou timeout sem nenhuma fala.
+        elapsed = current_time - ctx.start_time
+        if ctx.duration is not None and elapsed >= ctx.duration:
+            return "return"
+        if elapsed >= self.start_timeout:
+            return "return"
+        return None
+
+    # ==========================================================
+    # ESTADO: USUÁRIO ESTÁ FALANDO (GRAVANDO)
+    # ==========================================================
+
+    def _speaking_state(self, audio_block, level, current_time, ctx, level_callback):
+        """Fase de gravação. Devolve 'break' ou None (continuar)."""
+        ctx.recorded.append(audio_block.copy())
+
+        silence_threshold = max(
+            self.silence_threshold,
+            self._noise_floor * 1.35,
+        )
+        if level >= silence_threshold:
+            ctx.last_voice_time = current_time
+
+        if level_callback is not None:
+            try:
+                level_callback(level)
+            except Exception:
+                pass
+
+        # Fim da frase: silêncio longo o bastante após fala longa o bastante.
+        if (
+            ctx.last_voice_time is not None
+            and current_time - ctx.last_voice_time >= self.silence_duration
+            and current_time - ctx.speech_start >= self.minimum_speech_duration
+        ):
+            return "break"
+
+        # Limite máximo de duração da frase.
+        if current_time - ctx.speech_start >= self.max_duration:
+            return "break"
+        return None
+
+    # ==========================================================
+    # JUNTAR GRAVAÇÃO E RECONHECER
+    # ==========================================================
+
+    def _finish_recording(self, recorded_blocks):
         if not recorded_blocks:
             return None
 
-        # ==========================================================
-        # JUNTAR GRAVAÇÃO
-        # ==========================================================
-
-        recording = np.concatenate(
-            recorded_blocks
-        )
-
-        audio = sr.AudioData(
-            recording.tobytes(),
-            self.sample_rate,
-            2
-        )
-
-        # ==========================================================
-        # RECONHECIMENTO
-        # ==========================================================
+        recording = np.concatenate(recorded_blocks)
+        audio = sr.AudioData(recording.tobytes(), self.sample_rate, 2)
 
         try:
-
-            text = self.recognizer.recognize_google(
-                audio,
-                language="pt-BR"
-            )
-
+            text = self.recognizer.recognize_google(audio, language="pt-BR")
             if not text:
                 return None
-
             return text.strip()
-
         except sr.UnknownValueError:
-
             return None
-
         except sr.RequestError as error:
-
             raise RuntimeError(
                 "Erro no serviço de reconhecimento: "
                 f"{error}"

@@ -7,6 +7,7 @@ from tools.api_client import ExternalToolClient
 from tools.api_manager import ToolManager, ToolSpec
 from tools.productivity import ProductivityTools
 from tools.monitoring import MonitoringTools
+from tools.content_creation import ContentCreationTools
 
 
 WMO_WEATHER_CODES = {
@@ -280,7 +281,7 @@ class GeocodingTool:
         }
 
 
-def build_tool_registry(homework_handler=None) -> ToolManager:
+def build_tool_registry(homework_handler=None, knowledge_base=None) -> ToolManager:
     manager = ToolManager()
     productivity = ProductivityTools()
     monitoring = MonitoringTools()
@@ -395,8 +396,101 @@ def build_tool_registry(homework_handler=None) -> ToolManager:
             implementation=homework_handler,
             semantic_only=True,
         ))
-    manager.register(ToolSpec(name="create_document", purpose="Cria um documento Markdown.", category="produtividade", parameters=["path", "title", "content"], tags=["documento", "relatorio"], implementation=productivity.create_document))
-    manager.register(ToolSpec(name="create_presentation", purpose="Cria um roteiro de apresentação em Markdown.", category="produtividade", parameters=["path", "title", "slides"], tags=["apresentacao", "slides"], implementation=productivity.create_presentation_outline))
+    manager.register(ToolSpec(name="create_document", purpose="Cria um documento Markdown. Prefira create_document_docx quando a pessoa pedir algo para abrir no Word ou entregar pronto.", category="produtividade", parameters=["path", "title", "content"], tags=["markdown", "md", "nota simples"], implementation=productivity.create_document, semantic_only=True))
+    manager.register(ToolSpec(name="create_presentation", purpose="Cria um roteiro de apresentação em Markdown (texto puro). Prefira create_presentation_pptx quando a pessoa pedir slides de verdade.", category="produtividade", parameters=["path", "title", "slides"], tags=["roteiro", "rascunho de slides"], implementation=productivity.create_presentation_outline, semantic_only=True))
+
+    # ==========================================================
+    # FASE 3 — GERAÇÃO REAL DE CONTEÚDO (formatos nativos)
+    # ==========================================================
+    # Ferramentas novas, ADITIVAS: as de Markdown acima continuam intactas.
+    # Aqui o usuário recebe arquivos que abrem nos aplicativos reais.
+    content_tools = ContentCreationTools()
+    manager.register(ToolSpec(
+        name="create_presentation_pptx",
+        purpose=(
+            "Cria uma apresentação PowerPoint REAL (.pptx) que abre no PowerPoint. "
+            "Use quando a pessoa pedir slides, apresentação ou PPT. Informe title e "
+            "slides; cada slide pode ser um texto ou {title, bullets, notes}."
+        ),
+        category="produtividade",
+        parameters=["title", "slides", "path"],
+        tags=["pptx", "powerpoint", "slides", "apresentacao", "ppt"],
+        implementation=content_tools.create_presentation_pptx,
+        # semantic_only: só a IA pode chamá-la, com a estrutura pronta
+        # (title + slides). Sem isso, o reconhecedor antigo de Markdown
+        # (create_presentation) sequestrava o pedido de PPTX.
+        semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="create_document_docx",
+        purpose=(
+            "Cria um documento Word REAL (.docx) que abre no Word. Use quando a "
+            "pessoa pedir documento, trabalho, redação ou relatório em Word. "
+            "Informe title, content (texto) e sections opcionais."
+        ),
+        category="produtividade",
+        parameters=["title", "content", "sections", "path"],
+        tags=["docx", "word", "documento", "trabalho", "redacao"],
+        implementation=content_tools.create_document_docx,
+        semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="create_spreadsheet_xlsx",
+        purpose=(
+            "Cria uma planilha Excel REAL (.xlsx) que abre no Excel. Use quando a "
+            "pessoa pedir planilha, tabela ou organização de dados. Informe title, "
+            "headers e rows."
+        ),
+        category="produtividade",
+        parameters=["title", "rows", "headers", "path"],
+        tags=["xlsx", "excel", "planilha", "tabela", "dados"],
+        implementation=content_tools.create_spreadsheet_xlsx,
+        semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="create_mindmap_image",
+        purpose=(
+            "Cria um MAPA MENTAL em imagem (.png). Use quando a pessoa pedir mapa "
+            "mental, esquema ou organograma de um tema. Informe central_topic e "
+            "branches (cada ramo pode ter children)."
+        ),
+        category="produtividade",
+        parameters=["central_topic", "branches", "path"],
+        tags=["mapa mental", "mindmap", "esquema", "organograma", "diagrama"],
+        implementation=content_tools.create_mindmap_image,
+        semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="edit_video",
+        purpose=(
+            "Edita um vídeo local via ffmpeg: cortar trecho (trim), extrair áudio, "
+            "gerar GIF, acelerar ou mutar. Sempre gera um arquivo NOVO, nunca "
+            "altera o original. Informe source, operation e opções (start, end...)."
+        ),
+        category="produtividade",
+        parameters=["source", "operation", "start", "end"],
+        tags=["video", "cortar", "trim", "gif", "audio", "ffmpeg"],
+        implementation=content_tools.edit_video,
+        semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="draw_image",
+        purpose=(
+            "Desenha NA TELA do usuário, ao vivo, como se estivesse desenhando na "
+            "frente dele. Use quando a pessoa pedir um desenho, ilustração ou figura "
+            "simples. Informe title e shapes: círculos, retângulos, linhas e polilinhas "
+            "com cores nomeadas em português (amarelo, verde, azul...). Exemplo: "
+            "{\"title\": \"Cenário\", \"shapes\": [{\"shape\": \"circle\", "
+            "\"center\": [280,120], \"radius\": [60,60], \"fill\": \"amarelo\"}, "
+            "{\"shape\": \"rect\", \"from\": [60,300], \"to\": [470,420], "
+            "\"fill\": \"verde\"}]}. Coordenadas em uma área de 532x440."
+        ),
+        category="criatividade",
+        parameters=["title", "shapes"],
+        tags=["desenho", "desenhar", "ilustracao", "figura", "pintura", "arte"],
+        implementation=content_tools.draw_image_live,
+        semantic_only=True,
+    ))
     manager.register(ToolSpec(
         name="news", purpose="Busca as principais notícias em RSS.", category="informacao",
         parameters=["limit"], tags=["noticia", "noticias", "manchetes", "atualidades"], implementation=monitoring.news,
@@ -424,6 +518,115 @@ def build_tool_registry(homework_handler=None) -> ToolManager:
         name="report", purpose="Monta um relatório estruturado a partir do pedido.", category="produtividade",
         parameters=["title", "sections"], tags=["relatorio", "resumo executivo"], implementation=monitoring.report,
     ))
+
+    # ==========================================================
+    # AÇÕES BÁSICAS DE SISTEMA
+    # ==========================================================
+    # Estas cinco capacidades existiam num SEGUNDO registro paralelo
+    # (`tools/available.py` + `tools/registry.py`) que nenhum código chamava —
+    # um registro morto, com formato incompatível, mantendo duas "verdades"
+    # sobre as mesmas ações. Elas são registradas aqui, no registro OFICIAL,
+    # para que continuem existindo (nenhum recurso é removido) e passem a
+    # poder ser oferecidas ao modelo e ao catálogo de capacidades.
+    from tools.system import (
+        get_current_time,
+        get_current_date,
+        open_website,
+        open_program,
+        open_folder,
+    )
+    manager.register(ToolSpec(
+        name="current_time", purpose="Informa a hora atual.", category="sistema",
+        parameters=[], tags=["hora", "horario", "agora", "que horas"],
+        implementation=get_current_time,
+    ))
+    manager.register(ToolSpec(
+        name="current_date", purpose="Informa a data de hoje.", category="sistema",
+        parameters=[], tags=["data", "dia", "hoje", "que dia"],
+        implementation=get_current_date,
+    ))
+    manager.register(ToolSpec(
+        name="open_website", purpose="Abre um site no navegador padrão.", category="sistema",
+        parameters=["url"], tags=["site", "navegador", "abrir site", "url", "link"],
+        implementation=open_website, semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="open_program", purpose="Abre um programa do Windows.", category="sistema",
+        parameters=["program"], tags=["programa", "abrir programa", "executavel"],
+        implementation=open_program, semantic_only=True,
+    ))
+    manager.register(ToolSpec(
+        name="open_folder", purpose="Abre uma pasta do Windows.", category="sistema",
+        parameters=["path"], tags=["pasta", "diretorio", "abrir pasta", "explorer"],
+        implementation=open_folder, semantic_only=True,
+    ))
+
+    # ==========================================================
+    # CONHECIMENTO (RAG LOCAL)
+    # ==========================================================
+    # Estas ferramentas ligam a base de conhecimento (`core.knowledge`) ao
+    # cérebro: a IA pode INGERIR um material que o usuário forneceu e depois
+    # CONSULTAR o que já foi ingerido, citando a origem. É o que permite à
+    # VEGA responder sobre PDFs, páginas e transcrições.
+    knowledge = getattr(knowledge_base, "ingest", None) and knowledge_base
+    if knowledge is not None:
+        def _ingest_document(path: str = "", text: str = "", source: str = "") -> dict:
+            """Ingere um PDF do disco ou um texto já extraído."""
+            if path:
+                from core.knowledge import ingest_pdf
+                return ingest_pdf(knowledge, path)
+            if text:
+                label = source or "texto fornecido"
+                return knowledge.ingest(text, source=label, kind="text")
+            return {"status": "empty", "chunks": 0}
+
+        def _search_knowledge(query: str = "", limit: int = 4) -> dict:
+            """Consulta o que já foi ingerido."""
+            matches = knowledge.search(query, limit=limit)
+            return {
+                "query": query,
+                "matches": matches,
+                "count": len(matches),
+                "documents": [doc.get("source", "") for doc in knowledge.list_documents()],
+            }
+
+        def _list_knowledge() -> dict:
+            documents = knowledge.list_documents()
+            return {"documents": documents, "count": len(documents)}
+
+        manager.register(ToolSpec(
+            name="ingest_document",
+            purpose=(
+                "Ingere um documento ou texto no conhecimento da VEGA, para poder "
+                "responder perguntas sobre ele depois. Use quando a pessoa pedir "
+                "para ler, estudar, guardar ou aprender com um PDF, um arquivo ou "
+                "um texto. Informe path (caminho do arquivo) ou text (conteúdo)."
+            ),
+            category="conhecimento",
+            parameters=["path", "text", "source"],
+            tags=["ingerir", "aprender", "estudar", "guardar documento", "ler pdf", "memorizar"],
+            implementation=_ingest_document,
+        ))
+        manager.register(ToolSpec(
+            name="search_knowledge",
+            purpose=(
+                "Consulta o conhecimento já ingerido (documentos, PDFs, páginas) e "
+                "devolve os trechos mais relevantes com a origem. Use quando a "
+                "pergunta puder ser respondida por material que a pessoa forneceu."
+            ),
+            category="conhecimento",
+            parameters=["query", "limit"],
+            tags=["consultar", "pesquisar conhecimento", "o que diz o documento", "conteudo"],
+            implementation=_search_knowledge,
+        ))
+        manager.register(ToolSpec(
+            name="list_knowledge",
+            purpose="Lista os documentos já ingeridos no conhecimento da VEGA.",
+            category="conhecimento",
+            parameters=[],
+            tags=["documentos", "o que voce sabe", "conhecimento", "lista documentos"],
+            implementation=_list_knowledge,
+        ))
 
     # Ferramentas de conectividade (celular / TV). Registradas em bloco
     # isolado: se a camada falhar, o registry continua íntegro.

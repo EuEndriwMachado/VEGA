@@ -95,7 +95,13 @@ def remove_vega_prefix(text):
 
 
 def is_short_nonsense(text):
-    """Detecta falas curtas sem conteúdo real (ruído de transcrição)."""
+    """Detecta falas curtas sem conteúdo real (ruído de transcrição).
+
+    Números NÃO são ruído: uma sequência numérica curta é exatamente como o
+    usuário informa o PIN da VEGA ("5679"). Antes, "5679" era descartado aqui
+    e a VEGA respondia "Estou ouvindo." sem nunca concluir a autorização — o
+    PIN morria antes de chegar ao portão de segurança.
+    """
 
     if not text:
         return False
@@ -104,6 +110,11 @@ def is_short_nonsense(text):
     normalized = re.sub(r"\s+", " ", normalized).strip()
     if not normalized:
         return True
+
+    # Qualquer token puramente numérico é tratado como conteúdo válido (PIN,
+    # valores, horários etc.). Não pode ser descartado como ruído.
+    if any(token.isdigit() for token in normalized.split()):
+        return False
 
     words = normalized.split()
     if len(words) > 3:

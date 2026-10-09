@@ -15,12 +15,26 @@ import time
 SCREENSHOT_DIR = os.path.join("Uploads", "pc")
 
 
-def capture_image(monitor=0):
+def _brightness(image) -> float:
+    """Brilho médio (0-255). Usado para detectar captura preta."""
+    try:
+        grayscale = image.convert("L")
+        return float(sum(grayscale.getdata()) / (grayscale.width * grayscale.height))
+    except Exception:
+        return 255.0
+
+
+def capture_image(monitor=0, retry_dark=True):
     """Captura a tela do PC e devolve um objeto PIL.Image (sem salvar).
 
     Fonte única de captura de tela: usada tanto pelo print do usuário
     (que salva em disco) quanto pela visão do Gemini (que envia a imagem).
     Retorna None se a captura não estiver disponível.
+
+    ``retry_dark``: uma captura quase preta costuma significar que a janela da
+    PRÓPRIA VEGA estava na frente (o tema dela é `#010305`, quase preto).
+    Entregar isso ao modelo faz a VEGA responder "estou vendo uma tela escura"
+    — verdadeiro e inútil. Nesse caso tenta de novo, com uma breve espera.
     """
     try:
         import mss
@@ -28,14 +42,37 @@ def capture_image(monitor=0):
     except ImportError:
         return None
 
-    try:
+    def _grab():
         with mss.mss() as sct:
             monitors = sct.monitors
             index = monitor if 0 <= monitor < len(monitors) else 0
             shot = sct.grab(monitors[index])
             return Image.frombytes("RGB", shot.size, shot.rgb)
+
+    try:
+        image = _grab()
     except Exception:
         return None
+
+    if image is None or not retry_dark:
+        return image
+
+    attempts = 0
+    while _brightness(image) < 8.0 and attempts < 3:
+        attempts += 1
+        time.sleep(0.25)
+        try:
+            candidate = _grab()
+        except Exception:
+            break
+        if candidate is None:
+            break
+        if _brightness(candidate) >= _brightness(image):
+            image = candidate
+        if _brightness(image) >= 8.0:
+            break
+
+    return image
 
 
 def capture_screen(show=True, monitor=0):

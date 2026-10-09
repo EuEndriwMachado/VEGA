@@ -1,0 +1,19 @@
+{
+  "status": "planned",
+  "step": "planned",
+  "created_at": "2026-10-04T21:07:53.795460-03:00",
+  "task": {
+    "type": "trabalho",
+    "domain": "",
+    "details": "eu preciso montar",
+    "title": "Trabalho escolar",
+    "due_at": "2026-10-05T21:09:02.295654-03:00",
+    "deadline_label": "05/10 às 21:09",
+    "scheduled_id": "task_1791158942296",
+    "steps": [
+      "Definir o conteúdo principal de trabalho escolar.",
+      "Organizar a explicação em uma sequência simples.",
+      "Preparar o material visual e revisar a apresentação."
+    ]
+  }
+}

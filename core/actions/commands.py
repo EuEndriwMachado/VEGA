@@ -1127,6 +1127,21 @@ class VegaCommands:
     # ==========================================================
 
     @staticmethod
+    def _set_brightness_ps(percent):
+        """Script PowerShell que ALTERA o brilho de forma compatível.
+
+        Antes usava-se `.WmiSetBrightness(1, N)` como método direto, que falha
+        em várias versões do PowerShell/WMI ("method not found") — era a causa
+        de "Não consegui alterar o brilho" mesmo em notebook com o controle
+        disponível. `Invoke-CimMethod` é a forma oficial e funciona em todas.
+        """
+        return (
+            "Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods "
+            f"| Invoke-CimMethod -MethodName WmiSetBrightness "
+            f"-Arguments @{{Brightness={max(0, min(100, int(percent)))};Timeout=1}}"
+        )
+
+    @staticmethod
     def set_brightness(percent):
 
         if not VegaCommands._is_windows():
@@ -1140,9 +1155,7 @@ class VegaCommands:
         percent = max(0, min(100, percent))
 
         result = VegaCommands._run_powershell(
-            f"""
-            (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods).WmiSetBrightness(1, {percent})
-            """
+            VegaCommands._set_brightness_ps(percent)
         )
 
         if result and result.returncode == 0:
@@ -1151,34 +1164,45 @@ class VegaCommands:
         return "Não consegui alterar o brilho."
 
     @staticmethod
-    def brightness_up():
+    def _current_brightness():
+        """Lê o brilho atual; devolve None quando o monitor não suporta."""
+        result = VegaCommands._run_powershell(
+            "(Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness"
+        )
+        if not result or result.returncode != 0:
+            return None
+        match = re.search(r"\d+", result.stdout or "")
+        return int(match.group(0)) if match else None
+
+    @staticmethod
+    def brightness_up(step=10):
+
+        current = VegaCommands._current_brightness()
+        # Sem leitura (monitor externo sem suporte), tenta um valor seguro
+        # em vez de desistir — antes o comando falhava direto.
+        target = min(100, current + step) if current is not None else 80
 
         result = VegaCommands._run_powershell(
-            """
-            $brightness = (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness
-            $new = [Math]::Min(100, $brightness + 10)
-            (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods).WmiSetBrightness(1, $new)
-            """
+            VegaCommands._set_brightness_ps(target)
         )
 
         if result and result.returncode == 0:
-            return "Aumentando o brilho."
+            return f"Brilho subindo para {target}%."
 
         return "Não consegui alterar o brilho."
 
     @staticmethod
-    def brightness_down():
+    def brightness_down(step=10):
+
+        current = VegaCommands._current_brightness()
+        target = max(0, current - step) if current is not None else 30
 
         result = VegaCommands._run_powershell(
-            """
-            $brightness = (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness
-            $new = [Math]::Max(0, $brightness - 10)
-            (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods).WmiSetBrightness(1, $new)
-            """
+            VegaCommands._set_brightness_ps(target)
         )
 
         if result and result.returncode == 0:
-            return "Diminuindo o brilho."
+            return f"Brilho baixando para {target}%."
 
         return "Não consegui alterar o brilho."
 
@@ -1582,7 +1606,7 @@ class VegaCommands:
         manager = self.connectivity()
         if not manager:
             return "A camada de conectividade não está disponível agora."
-        result = manager.route(action, text=text, **kwargs)
+        result = manager.route(action, spoken_text=text, **kwargs)
         # Resultados com imagem (print do celular) vão para o painel da VEGA.
         if result.ok and isinstance(result.data, dict) and result.data.get("path"):
             if callable(getattr(self, "_result_callback", None)):

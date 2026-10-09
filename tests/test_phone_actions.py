@@ -371,4 +371,174 @@ class TestMonitorConexao:
         )
         status = monitor.status()
         assert "running" in status
-        assert "connected" in status
+        assert "connected" in status# ==============================================================
+# CONVERSA: LER MENSAGENS E RESPONDER SEM DESBLOQUEAR
+# ==============================================================
+
+class TestConversa:
+    """Leitura de conversa e resposta pelo WhatsApp.
+
+    O caso real: o WhatsApp mostra o conteúdo na tela de bloqueio, então a
+    VEGA lê a notificação e responde tocando no botão de mensagem de voz —
+    tudo isso sem o aparelho desbloqueado.
+    """
+
+    def test_le_ultima_mensagem_do_contato(self, registry):
+        dumpsys = """
+NotificationRecord(0x1 pkg=com.whatsapp)
+  android.title=String [length=34]
+  android.subText=String (Miguel)
+  android.text=SpannableString (Vou chegar às 20h)
+"""
+        responses = {
+            "devices": (True, "List of devices attached\nABC\tdevice\n", ""),
+            "dumpsys": (True, dumpsys, ""),
+        }
+        connector = PhoneConnector(registry=registry, runner=runner_factory(responses))
+        result = connector.execute("read_conversation", contact="miguel")
+        assert result.ok
+        assert "Vou chegar às 20h" in result.message
+
+    def test_filtra_pelo_remetente(self, registry):
+        dumpsys = """
+NotificationRecord(0x1 pkg=com.whatsapp)
+  android.title=String [length=10]
+  android.subText=String (Miguel)
+  android.text=SpannableString (mensagem do miguel)
+NotificationRecord(0x2 pkg=com.whatsapp)
+  android.title=String [length=10]
+  android.subText=String (Rita)
+  android.text=SpannableString (mensagem da rita)
+"""
+        responses = {
+            "devices": (True, "List of devices attached\nABC\tdevice\n", ""),
+            "dumpsys": (True, dumpsys, ""),
+        }
+        connector = PhoneConnector(registry=registry, runner=runner_factory(responses))
+        result = connector.execute("read_conversation", contact="rita")
+        assert result.ok
+        assert "rita" in result.message.lower()
+        assert "miguel" not in result.message.lower()
+
+    def test_remetente_sem_notificacao_avisa(self, registry):
+        dumpsys = """
+NotificationRecord(0x1 pkg=com.whatsapp)
+  android.title=String (Outro)
+  android.text=SpannableString (oi)
+"""
+        responses = {
+            "devices": (True, "List of devices attached\nABC\tdevice\n", ""),
+            "dumpsys": (True, dumpsys, ""),
+        }
+        connector = PhoneConnector(registry=registry, runner=runner_factory(responses))
+        result = connector.execute("read_conversation", contact="miguel")
+        assert not result.ok
+        assert "miguel" in result.message.lower()
+
+    def test_extrai_mensagens_da_tela(self):
+        xml = (
+            '<node text="Miguel" resource-id="com.whatsapp:id/conversation_contact_name"/>'
+            '<node text="Oi, tudo bem?"/>'
+            '<node text="Mensagem"/>'
+            '<node text="Vou chegar às 20h"/>'
+        )
+        messages = PhoneActions._parse_chat_messages(xml)
+        assert "Vou chegar às 20h" in messages
+        assert "Mensagem" not in messages
+
+    def test_responde_sem_desbloquear(self, registry):
+        """Responde tocando no botão de voz, sem usar wa.me (que exige desbloqueio)."""
+        screen = (
+            '<node content-desc="Mensagem de voz" '
+            'bounds="[980,2100][1080,2200]"/>'
+        )
+        calls = []
+
+        def runner(args):
+            calls.append(args)
+            if "devices" in args:
+                return True, "List of devices attached\nABC\tdevice\n", ""
+            if "uiautomator" in args:
+                return True, screen, ""
+            if "content" in args:
+                return True, "Row: 0 display_name=Miguel, data1=+5521988888888", ""
+            return True, "", ""
+
+        connector = PhoneConnector(registry=registry, runner=runner)
+        result = connector.execute("send_whatsapp", contact="Miguel", text="Já vou")
+        assert result.ok
+        # Abriu a conversa e tocou no botão de voz.
+        assert any("wa.me" in str(args) for args in calls)
+        assert any("input" in args and "tap" in args for args in calls)
+
+    def test_sem_botao_de_voz_nao_mente(self, registry):
+        screen = '<node text="Conversa aberta"/>'
+
+        def runner(args):
+            if "devices" in args:
+                return True, "List of devices attached\nABC\tdevice\n", ""
+            if "uiautomator" in args:
+                return True, screen, ""
+            if "content" in args:
+                return True, "Row: 0 display_name=Miguel, data1=+5521988888888", ""
+            return True, "", ""
+
+        connector = PhoneConnector(registry=registry, runner=runner)
+        result = connector.execute("send_whatsapp", contact="Miguel", text="Já vou")
+        assert not result.ok
+        assert "confirme" in result.message.lower()
+
+    def test_sem_contato_pede_destino(self, registry):
+        connector = PhoneConnector(registry=registry, runner=connected_runner())
+        result = connector.execute("send_whatsapp", text="Oi")
+        assert not result.ok
+        assert "quem" in result.message.lower()
+
+    def test_sem_texto_pede_conteudo(self, registry):
+        connector = PhoneConnector(registry=registry, runner=connected_runner())
+        result = connector.execute("send_whatsapp", contact="Miguel")
+        assert not result.ok
+        assert "escrevo" in result.message.lower()
+
+
+# ==============================================================
+# LIGAÇÃO PELO WHATSAPP
+# ==============================================================
+
+class TestLigacaoWhatsapp:
+    def test_toca_no_botao_de_chamada(self, registry):
+        screen = (
+            '<node text="Chamada" '
+            'bounds="[900,120][1000,220]"/>'
+        )
+        calls = []
+
+        def runner(args):
+            calls.append(args)
+            if "devices" in args:
+                return True, "List of devices attached\nABC\tdevice\n", ""
+            if "uiautomator" in args:
+                return True, screen, ""
+            if "content" in args:
+                return True, "Row: 0 display_name=Rita, data1=+5521977777777", ""
+            return True, "", ""
+
+        connector = PhoneConnector(registry=registry, runner=runner)
+        result = connector.execute("call", contact="Rita", app="whatsapp")
+        assert result.ok
+        assert "whatsapp" in result.message.lower()
+        assert any("input" in args and "tap" in args for args in calls)
+
+    def test_ligacao_normal_nao_usa_whatsapp(self, registry):
+        calls = []
+
+        def runner(args):
+            calls.append(args)
+            if "devices" in args:
+                return True, "List of devices attached\nABC\tdevice\n", ""
+            return True, "", ""
+
+        connector = PhoneConnector(registry=registry, runner=runner)
+        result = connector.execute("call", number="+5521977777777")
+        assert result.ok
+        assert any("tel:" in str(args) for args in calls)

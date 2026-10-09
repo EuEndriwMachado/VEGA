@@ -291,7 +291,9 @@ def test_quota_exhausted_message_is_reported_clearer(monkeypatch):
     ai.gemini_model = "models/gemini-3.1-pro-preview"
     ai.gemini_fallback_model = "models/gemini-2.5-flash-lite"
 
-    chunks = list(ai.chat_stream([{"role": "user", "content": "oi"}]))
+    # O contrato deste teste é o tratamento da cota do fluxo Gemini: não
+    # delegamos a outro provedor nem dependemos da seleção por credenciais.
+    chunks = list(ai._chat_stream_gemini([{"role": "user", "content": "oi"}]))
 
     assert any("quota" in chunk.lower() or "cota" in chunk.lower() for chunk in chunks)
     assert all("não consegui responder agora" not in chunk.lower() for chunk in chunks)

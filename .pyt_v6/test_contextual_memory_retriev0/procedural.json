@@ -1,0 +1,14 @@
+[
+    {
+        "task": "estudar física",
+        "steps": [
+            "rever teoria",
+            "resolver exercícios"
+        ],
+        "importance": 0.9,
+        "confidence": 0.8,
+        "created_at": "2026-10-08T22:09:25",
+        "last_used": "2026-10-08T22:09:25",
+        "type": "procedural"
+    }
+]

@@ -163,6 +163,58 @@ class DatabaseReader:
                     rows.append((path.stem, record.get("role", ""), record.get("content", ""), ""))
         return rows
 
+    # ==========================================================
+    # AUDITORIA DE SEGURANÇA
+    # ==========================================================
+
+    def security_rows(self):
+        """Registros de segurança: quem pediu ações perigosas e o resultado.
+
+        Lê o mesmo `data/security_audit.json` que a VEGA escreve, então a
+        tela mostra pedidos, acertos, PIN errado e rosto não reconhecido.
+        """
+        log_path = self.root / "data" / "security_audit.json"
+        try:
+            entries = json.loads(log_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        if not isinstance(entries, list):
+            return []
+
+        rows = []
+        for entry in reversed(entries):
+            if not isinstance(entry, dict):
+                continue
+            event = str(entry.get("event") or "dangerous_action")
+            labels = {
+                "requested": "Pedido registrado",
+                "denied": "Negado",
+                "authorized": "Autorizado",
+                "dangerous_action": "Ação perigosa",
+            }
+            rows.append((
+                str(entry.get("timestamp", "")),
+                labels.get(event, event),
+                str(entry.get("action_summary") or entry.get("action") or ""),
+                "sim" if entry.get("pin_valid") else "não",
+                self._face_label(entry),
+                str(entry.get("source") or ""),
+                "sim" if entry.get("authorized") else "não",
+                str(entry.get("evidence_path") or ""),
+            ))
+        return rows
+
+    @staticmethod
+    def _face_label(entry):
+        """Descreve o resultado facial de um registro de segurança."""
+        if entry.get("face_valid") is True:
+            return "reconhecido"
+        if entry.get("face_valid") is False:
+            return "não reconhecido"
+        if entry.get("face_supported"):
+            return "foto tirada"
+        return "sem foto"
+
     def counts(self):
         memory_count = len(self.memory_rows())
         daily_count = len(self.daily_rows())
@@ -578,6 +630,31 @@ class DatabaseViewer(QMainWindow):
         sql_layout.addWidget(self.sql_results)
         self.tabs.addTab(sql_page, "SQL")
         self.tabs.setTabToolTip(4, "Executar consultas SQL personalizadas no banco ativo da VEGA.")
+
+        # ----------------------------------------------------------
+        # SEGURANÇA: quem pediu ações perigosas e o que aconteceu
+        # ----------------------------------------------------------
+        self.security = self._table([
+            "Quando", "Evento", "Ação pedida", "PIN ok", "Rosto",
+            "Origem", "Autorizado", "Foto",
+        ])
+        self.security.setToolTip(
+            "Cada pedido de ação perigosa fica registrado aqui — inclusive "
+            "quando o PIN é errado e nada é executado."
+        )
+        security_page = QWidget()
+        security_layout = QVBoxLayout(security_page)
+        security_help = QLabel(
+            "Auditoria de segurança: pedidos, tentativas de PIN e se o rosto "
+            "foi reconhecido. Duplo clique abre a foto da evidência."
+        )
+        security_help.setWordWrap(True)
+        security_layout.addWidget(security_help)
+        security_layout.addWidget(self.security)
+        self.security.cellDoubleClicked.connect(self.open_evidence)
+        self.tabs.addTab(security_page, "Segurança")
+        self.tabs.setTabToolTip(5, "Registro de acessos e tentativas em ações perigosas.")
+
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(container)
 
@@ -779,12 +856,35 @@ class DatabaseViewer(QMainWindow):
             self.last_event.setText(details["last_event"])
             self._fill(self.memories, self.reader.memory_rows(self.filter.currentData() or None))
             self._fill(self.daily, self.reader.daily_rows())
+            self._fill(self.security, self.reader.security_rows())
             self.brain_graph.refresh()
             if hasattr(self, "source_display"):
                 self.source_display.setText(self.reader.source.upper())
             self.status.setText("Dados atualizados")
         except Exception as error:
             self.status.setText(f"Não foi possível ler a fonte: {error}")
+
+    def open_evidence(self, row, _column):
+        """Abre a foto da evidência daquele registro de segurança."""
+        item = self.security.item(row, 7)
+        path = item.text() if item is not None else ""
+        if not path:
+            QMessageBox.information(
+                self, "Evidência", "Este registro não tem foto."
+            )
+            return
+        target = Path(path)
+        if not target.is_absolute():
+            target = self.reader.root / target
+        if not target.exists():
+            QMessageBox.warning(
+                self, "Evidência", f"A foto não foi encontrada em:\n{target}"
+            )
+            return
+        try:
+            os.startfile(str(target))  # type: ignore[attr-defined]
+        except (OSError, AttributeError) as error:
+            QMessageBox.warning(self, "Evidência", f"Não consegui abrir a foto: {error}")
 
     def closeEvent(self, event):
         self.reader.close()

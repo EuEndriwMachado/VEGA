@@ -349,12 +349,25 @@ class TestPhoneConnector:
             lambda name: "/usr/bin/adb" if name == "adb" else None,
         )
         started = {}
-        monkeypatch.setattr(
-            "core.connectivity.phone.subprocess.Popen",
-            lambda args, **kwargs: started.setdefault("args", args),
-        )
+
+        class _FakeProcess:
+            # O mirror confere o ciclo de vida do scrcpy (poll()/stdout); a
+            # lista usada antes não tinha poll() e o AttributeError virava
+            # "Falha ao executar mirror".
+            def poll(self):
+                return None
+
+            stdout = None
+
+        def _fake_popen(args, **kwargs):
+            started["args"] = args
+            return _FakeProcess()
+
+        monkeypatch.setattr("core.connectivity.phone.subprocess.Popen", _fake_popen)
         connector = PhoneConnector(registry=registry, runner=fake_runner_factory(responses))
         monkeypatch.setattr(connector, "_find_scrcpy", lambda: "/usr/bin/scrcpy")
+        # O mirror espera 1.5s para confirmar que o scrcpy subiu de verdade.
+        monkeypatch.setattr("core.connectivity.phone.time.sleep", lambda _seconds: None)
         result = connector.execute("mirror")
         assert result.ok
         assert "/usr/bin/scrcpy" in started["args"]
@@ -447,7 +460,7 @@ class TestConnectivityManager:
             registry=registry,
             connectors=[FakePhone(registry=registry)],
         )
-        result = manager.route("battery", text="como está a bateria do meu celular?")
+        result = manager.route("battery", spoken_text="como está a bateria do meu celular?")
         assert result.ok
         assert "50" in result.message
 
@@ -465,12 +478,12 @@ class TestConnectivityManager:
             registry=registry,
             connectors=[FakeTV(registry=registry)],
         )
-        result = manager.route("pause", text="pausa a tv")
+        result = manager.route("pause", spoken_text="pausa a tv")
         assert result.ok
 
     def test_sem_alvo_pede_esclarecimento(self, registry):
         manager = ConnectivityManager(registry=registry, connectors=[])
-        result = manager.route("pause", text="pausa aí")
+        result = manager.route("pause", spoken_text="pausa aí")
         assert not result.ok
         assert "celular ou na tv" in result.message.lower()
 
@@ -528,5 +541,5 @@ class TestConnectivityManager:
                 self._actions = {"battery": lambda **_k: ConnectorResult.success("ok")}
 
         manager = ConnectivityManager(registry=registry, connectors=[FakePhone()])
-        result = manager.route("battery", text="isso", kind="phone")
+        result = manager.route("battery", spoken_text="isso", kind="phone")
         assert result.ok

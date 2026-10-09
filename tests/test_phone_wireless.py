@@ -134,12 +134,25 @@ class TestPerfisEspelhamento:
     def test_mirror_usa_perfil_escolhido(self, monkeypatch, registry):
         responses = {"devices": (True, "List of devices attached\nABC\tdevice\n", "")}
         started = {}
-        monkeypatch.setattr(
-            "core.connectivity.phone.subprocess.Popen",
-            lambda args, **kwargs: started.setdefault("args", args),
-        )
+
+        class _FakeProcess:
+            # O mirror confere o ciclo de vida do scrcpy (poll()/stdout); a
+            # lista usada antes não tinha poll() e o AttributeError virava
+            # "Falha ao executar mirror".
+            def poll(self):
+                return None
+
+            stdout = None
+
+        def _fake_popen(args, **kwargs):
+            started["args"] = args
+            return _FakeProcess()
+
+        monkeypatch.setattr("core.connectivity.phone.subprocess.Popen", _fake_popen)
         connector = PhoneConnector(registry=registry, runner=runner_factory(responses))
         monkeypatch.setattr(connector, "_find_scrcpy", lambda: "/usr/bin/scrcpy")
+        # O mirror espera 1.5s para confirmar que o scrcpy subiu de verdade.
+        monkeypatch.setattr("core.connectivity.phone.time.sleep", lambda _seconds: None)
 
         result = connector.execute("mirror", profile="fast")
         assert result.ok

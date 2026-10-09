@@ -1,0 +1,15 @@
+[
+  {
+    "timestamp": "2026-10-08T22:39:09+00:00",
+    "event": "dangerous_action",
+    "action": "deletar arquivos importantes",
+    "action_summary": "deletar arquivos importantes",
+    "source": "voz",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": false,
+    "face_valid": null,
+    "evidence_path": null,
+    "authorized": true
+  }
+]

@@ -4,8 +4,25 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from pathlib import Path
 from typing import Optional
+
+# Brilho médio abaixo do qual o quadro é considerado INÚTIL para validação.
+# Webcams entregam quadros quase pretos enquanto o sensor aquece; comparar o
+# rosto do dono com uma imagem preta reprovava a própria pessoa.
+_BLANK_FRAME_THRESHOLD = 8.0
+
+
+def _is_blank(frame) -> bool:
+    """True quando o quadro é praticamente preto (sem informação útil)."""
+    try:
+        import cv2
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
+        return float(gray.mean()) < _BLANK_FRAME_THRESHOLD
+    except Exception:
+        return False
 
 
 class LocalFaceValidator:
@@ -32,6 +49,20 @@ class LocalFaceValidator:
         return bool(self._reference)
 
     @staticmethod
+    def _supports_haar():
+        """O OpenCV instalado tem Haar cascade?
+
+        O OpenCV 5 REMOVEU o `CascadeClassifier`. Verificar isso antes de
+        usar evita o AttributeError que derrubava toda a cadeia facial (a
+        câmera nem ligava e nenhuma evidência era gravada).
+        """
+        try:
+            import cv2
+            return hasattr(cv2, "CascadeClassifier")
+        except Exception:
+            return False
+
+    @staticmethod
     def _detector():
         import cv2
         model_path = Path(__file__).resolve().parents[2] / "models" / "haarcascade_frontalface_default.xml"
@@ -40,18 +71,114 @@ class LocalFaceValidator:
             raise RuntimeError(f"Modelo facial não encontrado: {model_path}")
         return detector
 
-    @staticmethod
-    def _detectors():
+    #: Detectores já carregados, reaproveitados entre chamadas.
+    #: Recarregar o modelo a cada captura era desperdício (o modelo é
+    #: grande) e, em uso repetido, esgotava a memória do processo.
+    _detectors_cache = None
+
+    @classmethod
+    def _detectors(cls):
+        """Detectores de rosto disponíveis, sem quebrar em nenhum OpenCV.
+
+        - OpenCV 4.x: usa os Haar cascades de `models/` (comportamento
+          original, mantendo a `face_reference.json` já enrolada válida).
+        - OpenCV 5+: os cascades não existem mais; cai para o detector DNN
+          (`FaceDetectorYN`), que é mais preciso.
+
+        O resultado é memorizado: carregar o modelo é caro e não muda
+        enquanto o processo vive.
+        """
         import cv2
-        model_dir = Path(__file__).resolve().parents[2] / "models"
-        detectors = []
-        for filename in ("haarcascade_frontalface_default.xml", "haarcascade_profileface.xml"):
-            detector = cv2.CascadeClassifier(str(model_dir / filename))
-            if not detector.empty():
-                detectors.append(detector)
-        if not detectors:
-            raise RuntimeError(f"Modelos faciais não encontrados: {model_dir}")
-        return detectors
+
+        if cls._detectors_cache is not None:
+            return cls._detectors_cache
+
+        if cls._supports_haar():
+            model_dir = Path(__file__).resolve().parents[2] / "models"
+            detectors = []
+            for filename in ("haarcascade_frontalface_default.xml", "haarcascade_profileface.xml"):
+                detector = cv2.CascadeClassifier(str(model_dir / filename))
+                if not detector.empty():
+                    detectors.append(detector)
+            if detectors:
+                cls._detectors_cache = detectors
+                return detectors
+
+        # OpenCV 5 (ou cascades ausentes): detector baseado em rede neural.
+        dnn = cls._dnn_detector()
+        if dnn is not None:
+            cls._detectors_cache = [dnn]
+            return cls._detectors_cache
+
+        raise RuntimeError(
+            "Nenhum detector facial disponível. Instale opencv-python 4.x "
+            "(com Haar cascade) ou baixe o modelo YuNet para o OpenCV 5."
+        )
+
+    # Modelo YuNet usado pelo FaceDetectorYN (OpenCV 5+). É baixado uma vez
+    # e guardado em models/, junto dos cascades.
+    _YUNET_FILENAME = "face_detection_yunet_2023mar.onnx"
+    _YUNET_URL = (
+        "https://github.com/opencv/opencv_zoo/raw/main/models/"
+        "face_detection_yunet/face_detection_yunet_2023mar.onnx"
+    )
+
+    @classmethod
+    def _dnn_detector(cls):
+        """Cria o FaceDetectorYN do OpenCV 5, baixando o modelo se preciso."""
+        try:
+            import cv2
+            if not hasattr(cv2, "FaceDetectorYN"):
+                return None
+            model_path = Path(__file__).resolve().parents[2] / "models" / cls._YUNET_FILENAME
+            if not model_path.exists():
+                model_path.parent.mkdir(parents=True, exist_ok=True)
+                if not cls._download_yunet(model_path):
+                    return None
+            return cv2.FaceDetectorYN.create(
+                str(model_path), "", (320, 320),
+                score_threshold=0.7, nms_threshold=0.3, top_k=50,
+            )
+        except Exception:
+            return None
+
+    @staticmethod
+    def _download_yunet(target) -> bool:
+        """Baixa o modelo YuNet uma única vez (best effort)."""
+        try:
+            import requests
+            response = requests.get(LocalFaceValidator._YUNET_URL, timeout=60)
+            if response.status_code == 200 and response.content:
+                target.write_bytes(response.content)
+                return True
+        except Exception:
+            pass
+        return False
+
+    @staticmethod
+    def _detect_faces(detector, image):
+        """Detecta rostos com Haar (OpenCV 4) ou YuNet (OpenCV 5).
+
+        Devolve uma lista de retângulos (x, y, w, h).
+        """
+        if hasattr(detector, "detectMultiScale"):
+            return list(
+                detector.detectMultiScale(
+                    image, scaleFactor=1.05, minNeighbors=3, minSize=(45, 45)
+                )
+            )
+
+        # FaceDetectorYN: precisa da imagem em BGR e do tamanho ajustado.
+        import cv2
+        if len(image.shape) == 2:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        height, width = image.shape[:2]
+        detector.setInputSize((width, height))
+        _ok, faces = detector.detect(image)
+        if faces is None:
+            return []
+        # Cada linha: x, y, w, h, 5 landmarks, score.
+        return [(int(face[0]), int(face[1]), int(face[2]), int(face[3])) for face in faces]
 
     @classmethod
     def _embedding(cls, image):
@@ -64,7 +191,7 @@ class LocalFaceValidator:
         candidates = []
         for detector in cls._detectors():
             for candidate_image in (gray, cv2.flip(gray, 1)):
-                faces = detector.detectMultiScale(candidate_image, scaleFactor=1.05, minNeighbors=3, minSize=(45, 45))
+                faces = cls._detect_faces(detector, candidate_image)
                 candidates.extend((candidate_image, face) for face in faces)
         if not candidates:
             return None
@@ -134,7 +261,15 @@ class LocalFaceValidator:
             return False, None
 
     def validate_camera_sequence(self, camera_index=0, samples=5):
-        """Read several frames and require a majority match for stability."""
+        """Lê vários quadros da câmera e valida o rosto contra a referência.
+
+        Devolve (supported, face_valid, best_frame):
+
+        - `supported` = a câmera abriu E entregou quadros utilizáveis. É o que
+          autoriza tentar esta câmera; se for False, o chamador deve tentar a
+          PRÓXIMA da lista.
+        - `face_valid` = o rosto bateu com a referência em pelo menos um quadro.
+        """
         try:
             import cv2
             camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
@@ -142,23 +277,38 @@ class LocalFaceValidator:
                 camera.release()
                 return False, False, None
 
+            # Descarta os primeiros quadros: a webcam começa entregando imagem
+            # preta enquanto o sensor estabiliza. Poucos descartes faziam a
+            # validação comparar um quadro PRETO e reprovar o próprio dono.
+            for _ in range(5):
+                camera.read()
+                time.sleep(0.04)
+
             frames = []
             for _ in range(max(1, int(samples))):
                 success, frame = camera.read()
                 if success and frame is not None:
                     frames.append(frame)
+                time.sleep(0.03)
             camera.release()
             if not frames:
                 return False, False, None
 
-            scored = [(self._distance(frame), frame) for frame in frames]
+            # Quadros totalmente pretos não servem para validar NEM para
+            # procurar rosto: se todos forem assim, esta câmera não é útil.
+            usable = [frame for frame in frames if not _is_blank(frame)]
+            if not usable:
+                return False, False, None
+
+            scored = [(self._distance(frame), frame) for frame in usable]
             valid = [item for item in scored if item[0] is not None and item[0] <= self.threshold]
             best_distance, best_frame = min(
                 (item for item in scored if item[0] is not None),
                 key=lambda item: item[0],
-                default=(None, frames[-1]),
+                default=(None, usable[-1]),
             )
-            required = max(2, (len(frames) // 2) + 1)
-            return True, len(valid) >= required, best_frame
+            # Basta UMA leitura boa: exigir maioria reprovava quem se mexeu
+            # durante a captura, mesmo com o rosto aparecendo em várias fotos.
+            return True, len(valid) >= 1, best_frame
         except Exception:
             return False, False, None

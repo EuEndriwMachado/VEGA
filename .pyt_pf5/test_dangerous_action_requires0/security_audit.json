@@ -1,0 +1,41 @@
+[
+  {
+    "timestamp": "2026-10-08T01:09:25+00:00",
+    "event": "dangerous_action",
+    "action": "apagar pasta de imagens",
+    "action_summary": "apagar pasta de imagens",
+    "source": "voz",
+    "confirmed": false,
+    "pin_valid": false,
+    "face_supported": false,
+    "face_valid": null,
+    "evidence_path": null,
+    "authorized": false
+  },
+  {
+    "timestamp": "2026-10-08T01:09:25+00:00",
+    "event": "dangerous_action",
+    "action": "apagar pasta de imagens",
+    "action_summary": "apagar pasta de imagens",
+    "source": "voz",
+    "confirmed": true,
+    "pin_valid": false,
+    "face_supported": false,
+    "face_valid": null,
+    "evidence_path": null,
+    "authorized": false
+  },
+  {
+    "timestamp": "2026-10-08T01:09:25+00:00",
+    "event": "dangerous_action",
+    "action": "apagar pasta de imagens",
+    "action_summary": "apagar pasta de imagens",
+    "source": "voz",
+    "confirmed": true,
+    "pin_valid": true,
+    "face_supported": false,
+    "face_valid": null,
+    "evidence_path": null,
+    "authorized": true
+  }
+]

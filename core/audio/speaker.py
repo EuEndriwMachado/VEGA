@@ -216,12 +216,18 @@ class VegaSpeaker:
             return False
 
         # Observabilidade: o primeiro chunk do turno marca tts_started.
+        #
+        # BUG HISTÓRICO: este ramo fazia `return False` e ABORTAVA a fala.
+        # Como o `brain` passa `trace=` na primeira frase de cada turno, a
+        # VEGA marcava "tts_started" e nunca enfileirava o texto — a partir da
+        # segunda fala da sessão ela ficava muda (era o "ela não falou mais
+        # por áudio"). A marcação é só observabilidade: nunca pode impedir a
+        # reprodução.
         trace = turn_trace
         if trace is not None:
             if getattr(self, "turn_trace", None) is None:
                 self.turn_trace = trace
             trace.mark("tts_started")
-            return False
 
         text = self._prepare_text_for_speech(str(text).strip())
 

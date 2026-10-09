@@ -111,6 +111,86 @@ class ToolManager:
             return True
         return False
 
+    # Verbos/expressões que indicam que a pessoa está PEDINDO algo. Sem um
+    # deles, uma frase que só MENCIONA o assunto não deve chamar ferramenta:
+    # "que dia bonito hoje" é comentário sobre o clima, não um pedido de data;
+    # "meu filme favorito é bom" não é consulta de filme.
+    _REQUEST_MARKERS = (
+        "me diga", "me diz", "qual", "quais", "quanto", "quantos",
+        "quando", "onde", "que horas", "que dia", "que data",
+        "me mostra", "mostra", "mostre", "exibe", "abre", "abra", "abrir",
+        "criar", "crie", "fazer", "faca", "gerar", "gera", "busca", "busque",
+        "procura", "procure", "pesquisa", "pesquise", "tira", "tire",
+        "envia", "envie", "manda", "mande", "quero", "preciso", "tem como",
+        "consegue", "resuma", "resume", "leia", "toque", "toca",
+        "adicionar", "adiciona", "marcar", "marca", "colocar", "coloca",
+    )
+
+    @classmethod
+    def _looks_like_request(cls, normalized: str) -> bool:
+        """A fala pede algo, ou só menciona o assunto?"""
+        if not normalized:
+            return False
+        if normalized.strip().endswith("?"):
+            return True
+        return any(cls._contains_term(normalized, marker) for marker in cls._REQUEST_MARKERS)
+
+    @staticmethod
+    def _has_time_intent(text: str) -> bool:
+        """Intenção genuína de saber a HORA (não menção casual a tempo).
+
+        "que horas são" pergunta a hora. "que horas o filme começa?" pergunta
+        sobre o filme — a hora aparece como detalhe de outra pergunta. Para
+        distinguir, exigimos que a fala ACABE na pergunta de hora, sem outro
+        assunto pendente depois.
+        """
+        if re.search(
+            r"\b(?:que horas (?:sao|e|agora)|horas sao|me diga (?:a|as) horas?|"
+            r"qual (?:a|as) horas?|a hora agora|horario agora|que horario)\b\s*\??$",
+            text,
+        ):
+            return True
+
+        # "que horas" seguido de SUJEITO e VERBO de outro assunto (o filme
+        # comeca, a loja abre) é pergunta sobre esse assunto, não sobre a hora.
+        if re.search(r"\bque horas\b", text):
+            return not bool(re.search(
+                r"\bque horas\b\s+(?:o|a|os|as|um|uma)?\s*\w+\s+"
+                r"(?:comeca|comecou|abre|abriu|fecha|fechou|passa|sai|chega|"
+                r"termina|acaba|vai|inicia|iniciou)\b",
+                text,
+            ))
+
+        return bool(re.search(r"\b(?:hora|horario)\b", text)) and bool(
+            re.search(r"\b(?:que|qual|me diga|me diz|agora|sao)\b", text)
+        )
+
+    @staticmethod
+    def _has_date_intent(text: str) -> bool:
+        """Intenção genuína de saber a DATA.
+
+        Exige que "dia" seja o OBJETO da pergunta. "que dia é hoje" pergunta;
+        "que dia bonito hoje" é comentário sobre o clima — o adjetivo depois de
+        "dia" entrega o elogio, não a pergunta. Sem esta distinção, a VEGA
+        respondia a data para quem estava só comentando o tempo.
+        """
+        # Adjetivo logo depois de "dia" => comentário, não pergunta.
+        if re.search(
+            r"\bdia\s+(?:bonito|feio|lindo|maravilhoso|otimo|tranquilo|calmo|"
+            r"chuvoso|nublado|ensolarado|quente|frio|longo|dificil|cansativo|bom)\b",
+            text,
+        ):
+            return False
+        # "que dia" seguido de OUTRO assunto (você nasceu, ele chegou) não é
+        # pedido da data de hoje.
+        if re.search(r"\bque dia\b\s+(?:\w+\s+)?(?:voce|vc|ele|ela|nos|eu)\b", text):
+            return False
+        return bool(re.search(
+            r"\b(?:que dia|qual (?:o )?dia|que data|qual (?:a )?data|hoje e que dia|"
+            r"data de hoje|dia de hoje|me diga (?:o )?dia|em que dia)\b",
+            text,
+        ))
+
     def resolve_for_text(self, text: str) -> Optional[ToolSpec]:
         if not text:
             return None
@@ -120,12 +200,33 @@ class ToolManager:
         # Intent checks prioritários para ferramentas críticas
         is_currency = self._has_currency_intent(normalized)
         is_weather = self._has_weather_intent(normalized)
+        is_time = self._has_time_intent(normalized)
+        is_date = self._has_date_intent(normalized)
 
         if is_currency and "currency" in self._tools:
             return self._tools["currency"]
 
         if is_weather and "weather" in self._tools:
             return self._tools["weather"]
+
+        # Hora e data: usam o MESMO padrão estrito de intenção. Sem ele,
+        # "que dia bonito hoje" (comentário sobre o clima) virava consulta de
+        # data e a VEGA respondia a data em vez de conversar.
+        if is_time and "current_time" in self._tools:
+            return self._tools["current_time"]
+
+        if is_date and "current_date" in self._tools:
+            return self._tools["current_date"]
+
+        # Sem NENHUM indício de pedido, a fala é conversa — não chame ferramenta.
+        # É a proteção contra a frase aleatória que virava chamada de ferramenta.
+        if not self._looks_like_request(normalized):
+            return None
+
+        # Fala que apenas MENCIONA hora/data não deve cair em current_time nem
+        # current_date pelo score de tags ("dia" aparece em "que dia bonito").
+        # Essas duas só entram quando passaram pelo filtro estrito acima.
+        _intent_guarded = {"current_time", "current_date"}
 
         # Aliases refinados para evitar disparos acidentais
         aliases = {
@@ -151,6 +252,9 @@ class ToolManager:
                 continue
             if spec.name in {"currency", "weather"}:
                 # Já avaliados com filtros estritos de intenção
+                continue
+            if spec.name in _intent_guarded:
+                # Hora e data só por intenção explícita (ver acima).
                 continue
 
             score = 0

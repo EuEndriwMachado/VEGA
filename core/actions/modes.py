@@ -261,6 +261,67 @@ class VegaModes:
 
     @staticmethod
     def live(commands):
+        """Ativa o modo live (conversa em tempo real).
+
+        FONTE ÚNICA: existe um único motor de tempo real, o `LiveSession`
+        (`core/brain/live_session.py`), ativado pelo cérebro. Aqui só pedimos
+        ao cérebro para ligá-lo — assim o comando de voz "modo live" e o
+        comando do loop de escuta acionam exatamente a mesma coisa, em vez de
+        manter dois caminhos que divergem com o tempo.
+
+        O motor é construído sobre as mesmas peças que a VEGA já usa
+        (sounddevice/Pillow), então não depende de cv2/mss instalados.
+        """
+        global LIVE_MODE_ACTIVE
+
+        if LIVE_MODE_ACTIVE:
+            return "O modo Live já está ativo."
+
+        brain = getattr(commands, "brain", None) or getattr(commands, "_brain", None)
+        if brain is None:
+            return (
+                "Modo Live indisponível neste ambiente. A VEGA está usando o "
+                "Gemini em texto, que é mais estável e rápido para conversas normais."
+            )
+
+        try:
+            from config.ai import GEMINI_LIVE_MODEL
+        except Exception:
+            GEMINI_LIVE_MODEL = ""
+
+        if not GEMINI_LIVE_MODEL and not os.getenv("GEMINI_LIVE_MODEL", ""):
+            return (
+                "Modo Live indisponível neste ambiente. Defina GEMINI_LIVE_MODEL "
+                "no .env (ex.: gemini-2.5-flash-native-audio-preview-12-2025) e "
+                "reinicie a VEGA."
+            )
+
+        if not callable(getattr(brain, "start_live_mode", None)):
+            return "Modo Live indisponível neste ambiente."
+
+        try:
+            started = brain.start_live_mode(video_mode="camera")
+        except Exception as error:
+            return f"Não consegui preparar o live mode: {error}"
+
+        if not started:
+            return (
+                "Modo Live indisponível: confira a GEMINI_API_KEY no .env e se "
+                "o modelo de tempo real está liberado na sua conta."
+            )
+
+        LIVE_MODE_ACTIVE = True
+        return "Modo Live ativado."
+
+    @staticmethod
+    def _legacy_live(commands):
+        """Implementação anterior do live (mantida como referência).
+
+        Ela criava a sessão diretamente e dependia de cv2/mss para capturar
+        câmera e tela. Substituída pelo motor único em `core.brain.live_session`,
+        que reusa o capturador que a VEGA já tem. Mantida aqui apenas para
+        consulta — não é mais chamada por nenhum fluxo.
+        """
         global LIVE_MODE_ACTIVE
 
         if LIVE_MODE_ACTIVE:
@@ -290,7 +351,10 @@ class VegaModes:
             session = VegaLiveSession(
                 video_mode="camera",
                 speaker=speaker,
-                camera_index=1,
+                # Câmera do PC (padrão), não a do celular. O índice 1 fixo
+                # apontava para a câmera espelhada do telefone e a VEGA via
+                # tela preta quando o app de transmissão não estava no ar.
+                camera_index=0,
                 microphone_index=1,
             )
             if not session._api_key:

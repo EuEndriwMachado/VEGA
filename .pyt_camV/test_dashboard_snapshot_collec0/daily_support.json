@@ -1,0 +1,16 @@
+
+        {
+          "notes": [
+            {"text": "Revisar a introdução"},
+            {"text": "Entregar o relatório"}
+          ],
+          "focus": {
+            "goal": "Estudar física",
+            "duration_minutes": 30,
+            "steps": [
+              {"text": "Rever a teoria", "done": false},
+              {"text": "Resolver exercícios", "done": true}
+            ]
+          }
+        }
+        

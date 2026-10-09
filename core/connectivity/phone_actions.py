@@ -12,9 +12,10 @@ claras em português.
 
 from __future__ import annotations
 
+import os
 import re
 import time
-
+from urllib.parse import quote
 from core.connectivity.base import ConnectorResult
 
 
@@ -35,6 +36,10 @@ class PhoneActions:
     def _shell(self, *args, serial=None):
         return self.connector._adb("shell", *args, serial=serial)
 
+    def _adb(self, *args, serial=None):
+        """ADB cru (sem o 'shell'): usado por `exec-out` e `pull`."""
+        return self.connector._adb(*args, serial=serial)
+
     def _no_phone(self) -> ConnectorResult:
         return ConnectorResult.failure("Nenhum celular conectado.")
 
@@ -42,8 +47,14 @@ class PhoneActions:
     # NOTIFICAÇÕES
     # ==========================================================
 
-    def notifications(self, device=None, limit=5, **_kwargs) -> ConnectorResult:
-        """Lê as notificações ativas do celular."""
+    def notifications(self, device=None, limit=5, sender="", read=False,
+                      **_kwargs) -> ConnectorResult:
+        """Lê as notificações ativas do celular.
+
+        `sender` filtra por remetente/contato (ex.: "miguel") e `read=True`
+        pede o CONTEÚDO real: quando o dumpsys só traz uma referência
+        ("String [length=34]"), o app é aberto e a mensagem é lida da tela.
+        """
         serial = self._serial(device)
         if not serial:
             return self._no_phone()
@@ -52,19 +63,104 @@ class PhoneActions:
         if not ok or not output:
             return ConnectorResult.failure("Não consegui ler as notificações do celular.")
 
-        entries = self._parse_notifications(output, limit=limit)
+        records = self._notification_records(output)
+        wanted = self._fold(str(sender or ""))
 
-        if not entries:
+        items = []
+        for record in records:
+            if wanted and wanted not in self._fold(record.get("sender") or ""):
+                continue
+            items.append(record)
+
+        items = items[: max(1, int(limit or 5))]
+
+        if not items:
+            if wanted:
+                return ConnectorResult.success(
+                    f"Não encontrei notificação de {sender} no celular.",
+                    data={"items": []},
+                )
             return ConnectorResult.success(
                 "Nenhuma notificação nova no celular.", data={"items": []},
             )
+
+        # Conteúdo real: lê no app o que o dumpsys só referenciou.
+        if read:
+            for item in items:
+                if item.get("precise") or not item.get("package"):
+                    continue
+                content = self._read_notification_content(
+                    item["package"], serial, title=item.get("sender"),
+                )
+                if content:
+                    item["text"] = content
+                    item["precise"] = True
+
+        entries = [f"{item['sender']}: {item['text'][:160]}" for item in items]
 
         if len(entries) == 1:
             message = f"Uma notificação: {entries[0]}."
         else:
             message = f"{len(entries)} notificações: " + "; ".join(entries) + "."
 
-        return ConnectorResult.success(message, data={"items": entries})
+        return ConnectorResult.success(message, data={"items": entries, "records": items})
+
+    @staticmethod
+    def _fold(value) -> str:
+        """Minúsculas, sem acento — para comparar nomes de contato."""
+        import unicodedata
+        text = str(value or "").lower()
+        text = unicodedata.normalize("NFKD", text)
+        return "".join(ch for ch in text if not unicodedata.combining(ch)).strip()
+
+    @staticmethod
+    def _notification_records(output):
+        """Estrutura as notificações do dumpsys: remetente, app e conteúdo.
+
+        Cada registro indica se o texto veio REAL (entre parênteses) ou se é
+        só uma referência ("String [length=34]"), que precisa ser resolvida
+        abrindo o app.
+        """
+        records = []
+
+        for block in re.split(r"NotificationRecord", output or ""):
+            package_match = re.search(r"pkg=([\w.]+)", block)
+            if not package_match:
+                continue
+            package = package_match.group(1)
+            if package in {"android", "com.android.systemui", "com.android.providers.downloads"}:
+                continue
+
+            title = PhoneActions._notification_field(block, "android.title")
+            body = PhoneActions._notification_field(block, "android.text")
+
+            if title:
+                sender = title
+                text = body or title
+                precise = bool(body)
+            elif PhoneActions._notification_field_is_reference(block, "android.title"):
+                # WhatsApp manda o grupo no título (referência) e o nome de
+                # quem escreveu em android.subText: "João" -> "João: mensagem".
+                sender = PhoneActions._notification_field(block, "android.subText") or ""
+                text = body or ""
+                precise = bool(body)
+            else:
+                sender = PhoneActions._friendly_app(package)
+                text = body or ""
+                precise = bool(body)
+
+            if not sender or not text:
+                continue
+
+            records.append({
+                "sender": sender,
+                "package": package,
+                "app": PhoneActions._friendly_app(package),
+                "text": text,
+                "precise": precise,
+            })
+
+        return records
 
     @staticmethod
     def _parse_notifications(output, limit=5):
@@ -77,6 +173,9 @@ class PhoneActions:
         """
         entries = []
         seen = set()
+        # Mensagens do mesmo remetente agrupam-se numa linha só (a última
+        # prevalece): ler 3 linhas repetidas do mesmo contato não ajuda.
+        by_sender = {}
 
         # Cada notificação começa com "NotificationRecord".
         blocks = re.split(r"NotificationRecord", output)
@@ -101,16 +200,59 @@ class PhoneActions:
             app = PhoneActions._friendly_app(package)
             entry = f"{app}: {text[:120]}"
 
-            key = entry.lower()
-            if key in seen:
+            # Agrupa por app/remetente sem repetir a mesma conversa.
+            group_key = (app, str(title or "").strip().lower())
+            if group_key in by_sender:
+                by_sender[group_key] = entry
                 continue
-            seen.add(key)
-            entries.append(entry)
+            if entry.lower() in seen:
+                continue
+            seen.add(entry.lower())
+            by_sender[group_key] = entry
 
-            if len(entries) >= limit:
-                break
-
+        entries = list(by_sender.values())[:limit]
         return entries
+
+    @staticmethod
+    def _notification_field(block, field):
+        """Valor REAL de um campo de notificação (ou None quando é referência).
+
+        O Android escreve dois formatos no dumpsys:
+
+            android.text=SpannableString (texto real)
+            android.title=String [length=34]   <- referência, sem conteúdo
+
+        Aqui a referência vira None (desconhecido) para que quem lê possa
+        decidir buscar o conteúdo real em outro lugar em vez de exibir lixo.
+        """
+        # Com parênteses (Android 12+): o texto real está entre parênteses.
+        match = re.search(rf"{re.escape(field)}=[\w]*\s*\(([^)\n]*)\)", block)
+        if match:
+            value = match.group(1).strip()
+            if value and value.lower() not in {"null", "none"}:
+                return value
+            return None
+
+        # Com aspas (formatos mais antigos).
+        match = re.search(rf'{re.escape(field)}="([^"\n]+)"', block)
+        if match:
+            return match.group(1).strip() or None
+
+        # Texto direto, sem wrapper.
+        match = re.search(rf"{re.escape(field)}=([^\n]+)", block)
+        if match:
+            value = match.group(1).strip().strip('"')
+            if not value or "[" in value or value.lower() in {"null", "none"}:
+                return None
+            return value
+        return None
+
+    @staticmethod
+    def _notification_field_is_reference(block, field) -> bool:
+        """True quando o campo existe mas só traz uma referência (String [..])."""
+        if not re.search(rf"{re.escape(field)}=", block):
+            return False
+        return PhoneActions._notification_field(block, field) is None
 
     @staticmethod
     def _extract_notification_field(block, field):
@@ -144,6 +286,90 @@ class PhoneActions:
                 return value
 
         return ""
+
+    def _read_notification_content(self, package, serial, title=None):
+        """Tenta ler o TEXTO REAL de uma notificação pelo app que a publicou.
+
+        Quando o dumpsys só traz uma referência ("String [length=34]"), o
+        conteúdo fica no app. Abrir a notificação (o mesmo toque que a pessoa
+        daria) traz a mensagem para a tela, de onde ela é lida. Retorna ""
+        quando não foi possível ler de forma confiável.
+        """
+        if not package:
+            return ""
+
+        # Só para apps de mensagem: tocar numa notificação do sistema abriria
+        # uma tela qualquer, sem mensagem nenhuma para ler.
+        if package not in self._MESSAGE_PACKAGES:
+            return ""
+
+        for candidate in self._MESSAGE_ACTIVITY_CANDIDATES.get(package, ()):
+            ok, output, _error = self._shell(
+                "cmd", "package", "resolve-activity", "--brief", candidate,
+                serial=serial,
+            )
+            if not ok or "/" not in (output or ""):
+                continue
+
+            component = output.splitlines()[-1].strip()
+            self._shell("am", "start", "-n", component, serial=serial)
+            time.sleep(1.8)
+            screen = self._dump_ui(serial)
+            if not screen:
+                continue
+
+            messages = self._parse_chat_messages(screen)
+            if title:
+                filtered = [
+                    text for text in messages
+                    if title.split()[0].lower() in text.lower()
+                ]
+                if filtered:
+                    messages = filtered
+            if messages:
+                return messages[-1]
+
+        return ""
+
+    def _dump_ui(self, serial) -> str:
+        """Dumpa a hierarquia da tela atual (best effort)."""
+        for args in (
+            ("exec-out", "uiautomator", "dump", "/dev/tty"),
+            ("shell", "uiautomator", "dump", "/sdcard/vega_ui.xml"),
+        ):
+            ok, output, _error = self._adb(*args, serial=serial)
+            if not ok:
+                continue
+            if "/dev/tty" not in args:
+                pulled, content, _err = self._adb(
+                    "shell", "cat", "/sdcard/vega_ui.xml", serial=serial,
+                )
+                if pulled:
+                    output = content
+            if output and "<" in output:
+                return output
+        return ""
+
+    @staticmethod
+    def _parse_chat_messages(xml) -> list:
+        """Extrai as mensagens visíveis de uma tela de conversa.
+
+        Funciona com o `uiautomator dump`: os balões de mensagem carregam o
+        texto real, então os rótulos de interface ("Mensagem", "Digite") são
+        descartados por serem curtos ou genéricos.
+        """
+        if not xml:
+            return []
+
+        texts = []
+        for raw in re.findall(r'text="([^"]*)"', xml):
+            value = raw.strip()
+            if len(value) < 2:
+                continue
+            if value.lower() in PhoneActions._UI_LABEL_TEXTS:
+                continue
+            texts.append(value)
+        return texts
 
     @staticmethod
     def _friendly_app(package) -> str:
@@ -318,16 +544,12 @@ class PhoneActions:
         if not serial:
             return self._no_phone()
 
-        # Toca um som de notificação e vibra, sem depender de app externo.
+        # Dispara mídia já disponível e acende a tela, sem abrir navegador ou
+        # criar efeitos colaterais fora do pedido de localização.
         ok, _out, _err = self._shell(
             "cmd", "media_session", "dispatch", "play", serial=serial,
         )
-        # Reforça com vibração e som do sistema.
-        self._shell("input", "keyevent", "KEYCODE_MEDIA_PLAY", serial=serial)
-        self._shell(
-            "am", "start", "-a", "android.intent.action.VIEW",
-            "-d", "https://www.google.com", serial=serial,
-        )
+        self._shell("input", "keyevent", "KEYCODE_WAKEUP", serial=serial)
 
         if ok:
             return ConnectorResult.success(
@@ -347,8 +569,6 @@ class PhoneActions:
         if not serial:
             return self._no_phone()
 
-        import os
-
         remote = "/sdcard/DCIM/Camera/vega_photo.jpg"
 
         # Dispara a câmera pelo botão de hardware (funciona na maioria).
@@ -356,7 +576,7 @@ class PhoneActions:
         time.sleep(2.0)
 
         # Se a câmera não tiver aberto, tenta pelo app.
-        ok, output, _error = self._shell("ls", remote, serial=serial)
+        ok, _output, _error = self._shell("ls", remote, serial=serial)
         if not ok:
             self._shell(
                 "am", "start", "-a", "android.media.action.IMAGE_CAPTURE",
@@ -404,8 +624,46 @@ class PhoneActions:
     # LIGAÇÃO
     # ==========================================================
 
-    def call(self, contact="", number="", device=None, **_kwargs) -> ConnectorResult:
-        """Disca para um contato ou número pelo celular."""
+    # Apps de mensagem/telefone: usados para abrir a conversa e ler/enviar
+    # mensagens sem desbloquear a tela.
+    _MESSAGE_PACKAGES = {
+        "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger",
+        "com.instagram.android", "com.facebook.orca",
+        "com.google.android.apps.messaging", "com.android.mms",
+    }
+
+    _MESSAGE_ACTIVITY_CANDIDATES = {
+        "com.whatsapp": (
+            "com.whatsapp/.Main",
+            "com.whatsapp/.HomeActivity",
+        ),
+        "com.whatsapp.w4b": (
+            "com.whatsapp.w4b/com.whatsapp.Main",
+            "com.whatsapp.w4b/com.whatsapp.HomeActivity",
+        ),
+        "org.telegram.messenger": (
+            "org.telegram.messenger/org.telegram.ui.LaunchActivity",
+        ),
+        "com.instagram.android": (
+            "com.instagram.android/com.instagram.android.activity.MainTabActivity",
+        ),
+        "com.google.android.apps.messaging": (
+            "com.google.android.apps.messaging/com.google.android.apps.messaging.ui.ConversationListActivity",
+        ),
+        "com.android.mms": (
+            "com.android.mms/com.android.mms.ui.ConversationList",
+        ),
+    }
+
+    # Rótulos de interface que não são mensagem (evita lixo no resumo).
+    _UI_LABEL_TEXTS = {
+        "mensagem", "mensagens", "digite uma mensagem", "digite a mensagem",
+        "pesquisar", "procurar", "nova conversa", "camera", "câmera",
+        "anexar", "voltar", "ok", "cancelar", "enviar", "confirmar",
+    }
+
+    def call(self, contact="", number="", app="", device=None, **_kwargs) -> ConnectorResult:
+        """Disca para um contato/número, ou chama pelo WhatsApp quando pedido."""
         serial = self._serial(device)
         if not serial:
             return self._no_phone()
@@ -427,6 +685,11 @@ class PhoneActions:
         if not digits:
             return ConnectorResult.failure("Não consegui entender o número para ligar.")
 
+        # Ligação pelo WhatsApp: abre a conversa do contato e toca no botão
+        # de chamada. Precisa do celular desbloqueado (o app exige).
+        if "whatsapp" in str(app).lower() or "zap" in str(app).lower():
+            return self._call_whatsapp(digits, name or digits, serial)
+
         ok, _out, _err = self._shell(
             "am", "start", "-a", "android.intent.action.CALL",
             "-d", f"tel:{digits}", serial=serial,
@@ -436,6 +699,41 @@ class PhoneActions:
                 f"Ligando para {name or digits} pelo celular."
             )
         return ConnectorResult.failure("Não consegui iniciar a ligação.")
+
+    def _call_whatsapp(self, digits, label, serial) -> ConnectorResult:
+        """Liga por voz pelo WhatsApp abrindo a conversa do contato."""
+        self._open_app("com.whatsapp", serial)
+        time.sleep(1.2)
+        self._open_whatsapp_conversation(digits, serial)
+        time.sleep(2.5)
+
+        # O botão de chamada fica no topo da conversa; tocamos nele pelo
+        # texto visível na tela, sem depender de coordenadas fixas.
+        screen = self._dump_ui(serial)
+        tapped = False
+        if screen:
+            match = re.search(
+                r'text="(?:Chamada|Ligação|Call|Voice call|Chamar|Ligar)"[^>]*'
+                r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+                screen,
+                flags=re.IGNORECASE,
+            )
+            if match:
+                x1, y1, x2, y2 = (int(value) for value in match.groups())
+                self._shell(
+                    "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2),
+                    serial=serial,
+                )
+                tapped = True
+
+        if tapped:
+            return ConnectorResult.success(
+                f"Iniciei a chamada pelo WhatsApp para {label}."
+            )
+        return ConnectorResult.failure(
+            f"Abri a conversa de {label} no WhatsApp, mas não consegui tocar "
+            "no botão de chamada. Confirme a ligação no celular."
+        )
 
     def _find_number_by_name(self, name, serial):
         """Procura o número de um contato na agenda do celular."""
@@ -499,9 +797,161 @@ class PhoneActions:
             "Não consegui preparar a mensagem. Verifique se o app está instalado."
         )
 
+    def send_whatsapp(self, contact="", text="", device=None, **_kwargs) -> ConnectorResult:
+        """Envia mensagem no WhatsApp com o celular BLOQUEADO.
+
+        O caminho mais confiável é abrir a conversa do contato e usar o
+        botão de ENVIAR por voz, que funciona sem desbloquear a tela. É por
+        isso que não usamos o `wa.me` (que exige o aparelho desbloqueado).
+        """
+        serial = self._serial(device)
+        if not serial:
+            return self._no_phone()
+
+        contact = str(contact or "").strip()
+        text = str(text or "").strip()
+
+        if not contact:
+            return ConnectorResult.failure("Para quem eu envio a mensagem?")
+        if not text:
+            return ConnectorResult.failure("O que eu escrevo na mensagem?")
+
+        number = self._find_number_by_name(contact, serial)
+        if not number:
+            return ConnectorResult.failure(
+                f"Não encontrei o contato {contact} no celular."
+            )
+        digits = re.sub(r"[^\d]", "", number)
+
+        self._open_app("com.whatsapp", serial)
+        time.sleep(1.2)
+        self._open_whatsapp_conversation(digits, serial)
+        time.sleep(2.0)
+
+        screen = self._dump_ui(serial)
+        if not screen:
+            return ConnectorResult.failure(
+                "Abri o WhatsApp, mas não consegui ler a tela para enviar a "
+                "mensagem."
+            )
+
+        tapped = self._tap_whatsapp_voice_button(screen, serial)
+        if not tapped:
+            return ConnectorResult.failure(
+                f"Abri a conversa de {contact}, mas não encontrei o botão de "
+                "mensagem por voz. Confirme o envio no celular."
+            )
+
+        return ConnectorResult.success(
+            f"Abri o WhatsApp em {contact} e toquei em 'Mensagem de voz'. "
+            f"Fale agora: {text}"
+        )
+
+    def read_conversation(self, contact="", device=None, limit=3,
+                          **_kwargs) -> ConnectorResult:
+        """Lê as últimas mensagens de uma conversa do WhatsApp.
+
+        Funciona com o celular bloqueado: o WhatsApp mostra o conteúdo das
+        conversas na tela de bloqueio, então lemos a notificação do contato.
+        """
+        serial = self._serial(device)
+        if not serial:
+            return self._no_phone()
+
+        contact = str(contact or "").strip()
+        if not contact:
+            return ConnectorResult.failure("De quem você quer ler as mensagens?")
+
+        result = self.notifications(
+            device=device, limit=max(1, int(limit or 3)), sender=contact, read=True,
+        )
+        if not result.ok:
+            return result
+
+        records = (result.data or {}).get("records") or []
+        if not records:
+            return ConnectorResult.failure(
+                f"Não encontrei mensagens de {contact} no celular."
+            )
+
+        lines = []
+        for record in records:
+            sender = record.get("sender") or contact
+            text = str(record.get("text") or "").strip()
+            if text:
+                lines.append(f"{sender}: {text}")
+
+        if not lines:
+            return ConnectorResult.failure(
+                f"Não consegui ler o conteúdo das mensagens de {contact}."
+            )
+
+        return ConnectorResult.success(
+            "Últimas mensagens de " + contact + ": " + " | ".join(lines),
+            data={"contact": contact, "messages": lines},
+        )
+
+    def _open_app(self, package, serial) -> bool:
+        """Abre um app pelo pacote (monkey, depois resolve-activity)."""
+        ok, output, _error = self._shell(
+            "monkey", "-p", package, "-c",
+            "android.intent.category.LAUNCHER", "1", serial=serial,
+        )
+        if ok and "No activities found" not in output:
+            return True
+
+        ok, output, _error = self._shell(
+            "cmd", "package", "resolve-activity", "--brief", package, serial=serial,
+        )
+        if ok:
+            for line in output.splitlines():
+                line = line.strip()
+                if "/" in line and "." in line:
+                    started, _out, _err = self._shell(
+                        "am", "start", "-n", line, serial=serial,
+                    )
+                    if started:
+                        return True
+        return False
+
+    def _open_whatsapp_conversation(self, digits, serial) -> bool:
+        """Abre a conversa de um número no WhatsApp."""
+        ok, _out, _err = self._shell(
+            "am", "start", "-a", "android.intent.action.VIEW",
+            "-d", f"https://wa.me/{digits}",
+            "-p", "com.whatsapp", serial=serial,
+        )
+        if ok:
+            return True
+        ok, _out, _err = self._shell(
+            "am", "start", "-a", "android.intent.action.VIEW",
+            "-d", f"https://api.whatsapp.com/send?phone={digits}",
+            "-p", "com.whatsapp", serial=serial,
+        )
+        return ok
+
+    def _tap_whatsapp_voice_button(self, screen, serial) -> bool:
+        """Toca no botão de mensagem por voz (envia sem desbloquear)."""
+        patterns = (
+            r'content-desc="(?:Mensagem de voz|Voice message|Gravar áudio)"[^>]*'
+            r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+            r'resource-id="com.whatsapp:id/voice_note_btn"[^>]*'
+            r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+        )
+        for pattern in patterns:
+            match = re.search(pattern, screen, flags=re.IGNORECASE)
+            if not match:
+                continue
+            x1, y1, x2, y2 = (int(value) for value in match.groups())
+            self._shell(
+                "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2),
+                serial=serial,
+            )
+            return True
+        return False
+
     @staticmethod
     def _url_encode(value) -> str:
-        from urllib.parse import quote
         return quote(str(value), safe="")
 
     # ==========================================================
@@ -526,4 +976,88 @@ class PhoneActions:
         return ConnectorResult.failure(
             "Não consegui alterar o Bluetooth do celular. "
             "Pode ser preciso desbloquear a tela."
+        )# ==========================================================
+    # PESQUISA NA WEB (celular)
+    # ==========================================================
+
+    def search_web(self, query="", device=None, engine="google", **_kwargs) -> ConnectorResult:
+        """Pesquisa na web NO CELULAR (navegador padrão do aparelho).
+
+        Antes, "pesquise sobre eleições no celular" era enviado ao Google do
+        PC — o roteador reconhecia o dispositivo, mas não havia nenhuma ação
+        de pesquisa para o celular, então a fala caía no fluxo do computador.
+        Aqui a busca abre de verdade no aparelho.
+        """
+        serial = self._serial(device)
+        if not serial:
+            return self._no_phone()
+
+        query = str(query or "").strip()
+        if not query:
+            return ConnectorResult.failure("O que você quer pesquisar no celular?")
+
+        engine = str(engine or "google").lower()
+        if "youtube" in engine:
+            url = "https://www.youtube.com/results?search_query=" + self._url_encode(query)
+        else:
+            url = "https://www.google.com/search?q=" + self._url_encode(query)
+
+        if self._open_url(url, serial):
+            return ConnectorResult.success(
+                f"Pesquisando por {query} no navegador do celular."
+            )
+        return ConnectorResult.failure(
+            "Não consegui abrir a pesquisa no celular. Confira se há um "
+            "navegador instalado."
+        )
+
+    def _open_url(self, url, serial) -> bool:
+        """Abre uma URL no app padrão do Android (navegador/música)."""
+        ok, _out, _err = self._shell(
+            "am", "start", "-a", "android.intent.action.VIEW",
+            "-d", url, serial=serial,
+        )
+        return ok
+
+    # ==========================================================
+    # MÚSICA NO CELULAR
+    # ==========================================================
+
+    def play_music(self, query="", device=None, platform="", **_kwargs) -> ConnectorResult:
+        """Toca música NO CELULAR, de verdade.
+
+        "toca menos é mais no spotify" abria o app e não tocava nada porque o
+        caminho antigo só abria o pacote do Spotify. Aqui usamos a busca
+        profunda (`spotify:search:`) e, quando a fala não cita plataforma,
+        abrimos a busca do YouTube Music — que começa a tocar o primeiro
+        resultado sem login.
+        """
+        serial = self._serial(device)
+        if not serial:
+            return self._no_phone()
+
+        query = str(query or "").strip()
+        if not query:
+            return ConnectorResult.failure("Qual música você quer ouvir no celular?")
+
+        platform = str(platform or "").lower()
+        if "spotify" in platform:
+            # O deep link de busca do Spotify abre o app já no resultado.
+            if self._open_url("spotify:search:" + self._url_encode(query), serial):
+                return ConnectorResult.success(
+                    f"Abrindo {query} no Spotify do celular."
+                )
+            return ConnectorResult.failure(
+                "Não consegui abrir o Spotify no celular. Verifique se o app "
+                "está instalado."
+            )
+
+        # Padrão: YouTube Music no navegador/app do celular.
+        url = "https://music.youtube.com/search?q=" + self._url_encode(query)
+        if self._open_url(url, serial):
+            return ConnectorResult.success(
+                f"Tocando {query} no celular."
+            )
+        return ConnectorResult.failure(
+            "Não consegui abrir a música no celular."
         )

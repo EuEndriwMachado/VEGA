@@ -1,0 +1,182 @@
+[
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-09T18:33:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos em frente. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-09T18:33:24"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-09T18:33:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-09T18:33:25"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-09T18:33:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-09T18:33:25"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-09T18:33:25"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é uma ótima resposta para quem não quer se comprometer com nada. Vai me dizer o que está em dúvida ou prefere ficar só no suspense?",
+        "timestamp": "2026-10-09T18:33:26"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-09T18:33:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, apagando da mente. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-09T18:33:28"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-09T18:33:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, estou por aqui se precisar de algo.",
+        "timestamp": "2026-10-09T18:33:29"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-09T18:33:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-09T18:33:39"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-09T18:34:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-09T18:34:18"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-09T18:34:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-09T18:34:18"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-09T18:34:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-09T18:34:46"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-09T18:34:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-09T18:34:47"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-09T18:34:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-09T18:34:48"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-09T18:34:48"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Vai querer decidir o que vamos fazer ou vai ficar em cima do muro até quando?",
+        "timestamp": "2026-10-09T18:34:49"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-09T18:34:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, deixado pra lá. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-09T18:34:50"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-09T18:34:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por aqui. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-09T18:34:51"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-09T18:35:00"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-09T18:35:00"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-09T18:35:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-09T18:35:39"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-09T18:35:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-09T18:35:39"
+    }
+]

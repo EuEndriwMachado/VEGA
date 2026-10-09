@@ -429,3 +429,48 @@ class TestFalhasERecuperacao:
             t.join()
         # O lock do brain serializa turnos: nenhum worker explode.
         assert not errors or all("lock" not in str(e).lower() for e in errors)
+class TestTurnosConsecutivos:
+    """Um turno novo pode começar enquanto a VEGA ainda fala.
+
+    Caso real: a resposta anterior ainda está tocando quando o usuário pede
+    outra coisa ("responde o miguel"). O turno novo passa por PROCESSING e
+    THINKING partindo de SPEAKING — antes isso levantava
+    "Transição inválida: SPEAKING -> PROCESSING" e travava a conversa.
+    """
+
+    def test_turno_novo_partindo_de_speaking(self):
+        s = ConversationState(initial=ConversationState.SPEAKING)
+        s.transition(ConversationState.LISTENING)
+        s.transition(ConversationState.PROCESSING)
+        s.transition(ConversationState.THINKING)
+        assert s.state == ConversationState.THINKING
+
+    def test_speaking_para_processing_direto(self):
+        s = ConversationState(initial=ConversationState.SPEAKING)
+        assert s.transition(ConversationState.PROCESSING) == ConversationState.PROCESSING
+
+    def test_interrompido_pode_reiniciar_turno(self):
+        s = ConversationState(initial=ConversationState.SPEAKING)
+        s.transition(ConversationState.INTERRUPTED)
+        s.transition(ConversationState.PROCESSING)
+        s.transition(ConversationState.THINKING)
+        assert s.state == ConversationState.THINKING
+
+    def test_executando_pode_reiniciar_turno(self):
+        s = ConversationState(initial=ConversationState.EXECUTING)
+        s.transition(ConversationState.PROCESSING)
+        assert s.state == ConversationState.PROCESSING
+
+    def test_ciclo_de_varios_turnos_nao_trava(self):
+        """Vários turnos seguidos, como numa conversa normal."""
+        s = ConversationState(initial=ConversationState.LISTENING)
+        for _ in range(3):
+            s.transition(ConversationState.SPEAKING)
+            s.transition(ConversationState.LISTENING)
+        assert s.state == ConversationState.LISTENING
+
+    def test_transicao_realmente_invalida_continua_barrada(self):
+        # IDLE só pode ir para LISTENING: a validação não foi removida.
+        s = ConversationState(initial=ConversationState.IDLE)
+        with pytest.raises(Exception):
+            s.transition(ConversationState.SPEAKING)

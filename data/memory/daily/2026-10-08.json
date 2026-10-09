@@ -1,0 +1,3502 @@
+[
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:04:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se mudar de ideia.",
+        "timestamp": "2026-10-08T18:04:26"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T18:04:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T18:04:27"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T18:04:27"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Quer mandar o quê agora?",
+        "timestamp": "2026-10-08T18:04:28"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T18:04:28"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vamos fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-08T18:04:29"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T18:04:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-08T18:04:32"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:04:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-08T18:04:34"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T18:04:37"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T18:04:37"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T18:05:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T18:05:10"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T18:05:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T18:05:10"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:06:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-08T18:06:07"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T18:06:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom, então. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-08T18:06:11"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T18:06:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T18:06:14"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T18:06:14"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vamos fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-08T18:06:16"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T18:06:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T18:06:20"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:06:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-08T18:06:25"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T18:06:28"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T18:06:28"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T18:06:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T18:06:59"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T18:06:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T18:06:59"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:07:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se mudar de ideia.",
+        "timestamp": "2026-10-08T18:07:20"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T18:07:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só falar.",
+        "timestamp": "2026-10-08T18:07:27"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T18:07:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Tudo pronto por aqui. Manda o próximo passo.",
+        "timestamp": "2026-10-08T18:07:31"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T18:07:31"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vamos fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-08T18:07:35"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T18:07:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, combinado. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T18:07:39"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:07:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que está rolando?",
+        "timestamp": "2026-10-08T18:07:44"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T18:07:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T18:07:46"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T18:08:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T18:08:16"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T18:08:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T18:08:16"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:28:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo. O que manda?",
+        "timestamp": "2026-10-08T18:28:56"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T18:28:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T18:28:58"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T18:28:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T18:28:59"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T18:28:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T18:29:00"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T18:29:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T18:29:05"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T18:29:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Ok, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T18:29:23"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T18:29:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T18:29:25"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T18:29:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T18:29:58"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T18:29:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T18:29:58"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:34:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T19:34:32"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:34:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, se mudar de ideia é só falar. Estou por aqui.",
+        "timestamp": "2026-10-08T19:34:33"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:34:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Disposta a resolver. O que temos para agora?",
+        "timestamp": "2026-10-08T19:34:34"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:34:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez não seja resposta, Endriw. Vai por aí ou decide logo o que a gente vai fazer.",
+        "timestamp": "2026-10-08T19:34:35"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:34:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-08T19:34:37"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:34:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Do que você precisa agora, Endriw?",
+        "timestamp": "2026-10-08T19:34:38"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:34:40"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:34:40"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T19:35:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T19:35:12"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T19:35:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T19:35:12"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:35:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T19:35:26"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:35:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Tô por aqui se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T19:35:27"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:35:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Disponível por aqui. O que vamos resolver agora?",
+        "timestamp": "2026-10-08T19:35:28"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:35:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Decide aí, Endriw.",
+        "timestamp": "2026-10-08T19:35:29"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:35:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, trancado. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-08T19:35:31"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:35:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se mudar de ideia.",
+        "timestamp": "2026-10-08T19:35:32"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:35:34"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:35:34"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T19:36:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T19:36:05"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T19:36:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T19:36:05"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:36:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só falar.",
+        "timestamp": "2026-10-08T19:36:51"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:36:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo. Me avisa se precisar de algo.",
+        "timestamp": "2026-10-08T19:36:52"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:36:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora, Endriw?",
+        "timestamp": "2026-10-08T19:36:53"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:36:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Decide aí, Endriw.",
+        "timestamp": "2026-10-08T19:36:54"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:36:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, se mudar de ideia é só falar.",
+        "timestamp": "2026-10-08T19:36:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:36:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Tudo bem, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T19:36:57"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:36:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:36:59"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T19:37:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T19:37:30"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T19:37:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T19:37:30"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:38:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-08T19:38:31"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:38:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. O que manda?",
+        "timestamp": "2026-10-08T19:38:32"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:38:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T19:38:33"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:38:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o que, Endriw? Decide aí ou manda a próxima.",
+        "timestamp": "2026-10-08T19:38:34"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:38:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-08T19:38:36"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:38:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo. Me avisa se precisar de algo.",
+        "timestamp": "2026-10-08T19:38:37"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:38:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:38:39"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T19:39:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T19:39:10"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T19:39:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T19:39:10"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:58:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Estou por aqui se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T19:58:14"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:58:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-08T19:58:15"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:58:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T19:58:16"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:58:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o que, Endriw? Decide aí ou me fala logo o que está rondando essa cabeça.",
+        "timestamp": "2026-10-08T19:58:18"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:58:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-08T19:58:21"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:58:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T19:58:23"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:58:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:58:25"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T19:58:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T19:58:57"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T19:58:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T19:58:57"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:59:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que está rolando?",
+        "timestamp": "2026-10-08T19:59:29"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T19:59:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-08T19:59:31"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T19:59:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T19:59:32"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T19:59:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora?",
+        "timestamp": "2026-10-08T19:59:34"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T19:59:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-08T19:59:36"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T19:59:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T19:59:37"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T19:59:39"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T19:59:39"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:00:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:00:09"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:00:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:00:10"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:02:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avise se mudar de ideia.",
+        "timestamp": "2026-10-08T20:02:17"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:02:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T20:02:18"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:02:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga aí, Endriw. Em que posso te ajudar agora?",
+        "timestamp": "2026-10-08T20:02:19"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:02:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T20:02:20"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:02:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, cancelado. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-08T20:02:23"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:02:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T20:02:24"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:02:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:02:26"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:02:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:02:57"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:02:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:02:57"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:03:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T20:03:53"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:03:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T20:03:54"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:03:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga lá, Endriw. O que vamos resolver agora?",
+        "timestamp": "2026-10-08T20:03:55"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:03:55"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá na dúvida antes que eu decida por você.",
+        "timestamp": "2026-10-08T20:03:56"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:03:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T20:03:58"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:03:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T20:03:59"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:04:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:04:01"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:04:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:04:32"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:04:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:04:32"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:10:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-08T20:10:18"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:10:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T20:10:19"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:10:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga aí. O que vamos resolver agora?",
+        "timestamp": "2026-10-08T20:10:20"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:10:20"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que a gente vai fazer ou vai ficar em cima do muro até amanhã?",
+        "timestamp": "2026-10-08T20:10:21"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:10:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T20:10:23"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:10:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-08T20:10:24"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:10:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:10:26"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:10:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:10:58"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:10:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:10:58"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:12:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Ok, o que manda?",
+        "timestamp": "2026-10-08T20:12:14"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:12:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T20:12:15"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:12:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para hoje?",
+        "timestamp": "2026-10-08T20:12:16"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:12:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T20:12:17"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:12:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T20:12:19"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:12:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, Endriw. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-08T20:12:23"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:12:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:12:25"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:12:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:12:56"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:12:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:12:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:16:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T20:16:50"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:16:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só falar.",
+        "timestamp": "2026-10-08T20:16:51"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:16:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, Endriw. Do que você precisa agora?",
+        "timestamp": "2026-10-08T20:16:53"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:16:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T20:16:53"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:16:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, deixado pra lá. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T20:16:55"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:16:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo. O que manda?",
+        "timestamp": "2026-10-08T20:16:56"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:16:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:16:58"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:17:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:17:29"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:17:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:17:30"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:18:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T20:18:15"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:18:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T20:18:16"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:18:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga lá. O que temos para agora?",
+        "timestamp": "2026-10-08T20:18:18"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:18:18"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Vai querer decidir o que vamos fazer ou vai me deixar adivinhando?",
+        "timestamp": "2026-10-08T20:18:19"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:18:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T20:18:20"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:18:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T20:18:21"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:18:23"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:18:23"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:18:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T20:18:53"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T20:18:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-08T20:18:54"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T20:18:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T20:18:55"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T20:18:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T20:18:56"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T20:18:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T20:18:59"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T20:18:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T20:19:00"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T20:19:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T20:19:02"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T20:19:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T20:19:33"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T20:19:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T20:19:33"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:10:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T21:10:35"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:10:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T21:10:53"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:10:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Disponível. O que vamos resolver agora?",
+        "timestamp": "2026-10-08T21:10:57"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:10:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T21:10:58"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:10:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T21:11:00"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:11:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:11:01"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:11:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:11:03"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:11:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:11:33"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:11:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:11:33"
+    },
+    {
+        "role": "user",
+        "content": "o que você está vendo",
+        "timestamp": "2026-10-08T21:15:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Vejo uma tela preta mandando você iniciar o Iriun Webcam. Abre o aplicativo aí no celular ou no PC para a transmissão funcionar.",
+        "timestamp": "2026-10-08T21:15:56"
+    },
+    {
+        "role": "user",
+        "content": "Vega Olha minha tela",
+        "timestamp": "2026-10-08T21:16:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Sem celular conectado não faço milagre, Endriw. Conecta o Iriun ou o aparelho aí para eu conseguir ver alguma coisa.",
+        "timestamp": "2026-10-08T21:16:51"
+    },
+    {
+        "role": "user",
+        "content": "Vega Olha isso",
+        "timestamp": "2026-10-08T21:17:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Ainda continuo vendo essa tela preta te chamando atenção sobre o Iriun Webcam. Ou você abre o aplicativo pra fazer essa transmissão rodar logo, ou vai ter que me mostrar outra coisa, Endriw. Qual é o plano agora?",
+        "timestamp": "2026-10-08T21:17:21"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:25:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T21:25:35"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:25:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda agora?",
+        "timestamp": "2026-10-08T21:25:44"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:25:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga lá, Endriw. O que vamos ver agora?",
+        "timestamp": "2026-10-08T21:25:49"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:25:50"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá na dúvida antes que eu decida por você.",
+        "timestamp": "2026-10-08T21:25:56"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:26:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T21:26:02"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:26:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:26:11"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:26:13"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:26:13"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:26:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:26:41"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:26:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:26:41"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:27:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:27:49"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:27:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia ou se precisar de alguma coisa por aí.",
+        "timestamp": "2026-10-08T21:27:55"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:27:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T21:27:56"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:27:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez não seja resposta. Ou é sim, mas aí você decide se quer ir até o fim ou só enrolar. O que vai ser?",
+        "timestamp": "2026-10-08T21:28:18"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:28:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T21:28:30"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:28:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui concluir a solicitação com as ferramentas disponíveis.",
+        "timestamp": "2026-10-08T21:28:32"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:28:34"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:28:34"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:29:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:29:02"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:29:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:29:02"
+    },
+    {
+        "role": "user",
+        "content": "olha minha tela",
+        "timestamp": "2026-10-08T21:30:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Não encontrei nenhum celular conectado para espelhar a tela por aqui. Se estiver tentando mostrar o PC, me avisa qual janela quer que eu veja.",
+        "timestamp": "2026-10-08T21:30:28"
+    },
+    {
+        "role": "user",
+        "content": "oq vc esta vendo",
+        "timestamp": "2026-10-08T21:30:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Continuo sem ver nada por aqui. Se você não me mandar uma captura de tela ou abrir a janela certa, minha visão cibernética vai continuar no escuro.",
+        "timestamp": "2026-10-08T21:30:51"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:38:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T21:38:43"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:38:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T21:38:44"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:38:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, Endriw. Do que você precisa agora?",
+        "timestamp": "2026-10-08T21:38:45"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:38:45"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá rondando essa cabeça aí antes que eu decida por você.",
+        "timestamp": "2026-10-08T21:38:46"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:38:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T21:38:48"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:38:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T21:38:49"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:38:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:38:52"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:39:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:39:20"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:39:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:39:20"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:40:40"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se precisar de algo.",
+        "timestamp": "2026-10-08T21:40:48"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:40:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:41:25"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:41:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora, Endriw?",
+        "timestamp": "2026-10-08T21:41:27"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:41:27"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Vai querer decidir o que é ou seguimos o baile assim mesmo?",
+        "timestamp": "2026-10-08T21:41:29"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:41:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que você quer fazer agora?",
+        "timestamp": "2026-10-08T21:41:31"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:41:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:41:32"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:41:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:41:34"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:42:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:42:02"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:42:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:42:02"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:42:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T21:42:51"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:42:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, se mudar de ideia é só falar.",
+        "timestamp": "2026-10-08T21:42:52"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:42:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Dito e feito. O que temos para agora?",
+        "timestamp": "2026-10-08T21:42:53"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:42:53"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá rondando essa cabeça aí.",
+        "timestamp": "2026-10-08T21:42:54"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:42:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T21:42:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:42:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:42:58"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:43:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:43:00"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:43:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:43:28"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:43:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:43:28"
+    },
+    {
+        "role": "user",
+        "content": "mostra a tela do celular",
+        "timestamp": "2026-10-08T21:45:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Espelhando a tela do celular.",
+        "timestamp": "2026-10-08T21:45:02"
+    },
+    {
+        "role": "user",
+        "content": "Olha a minha tela",
+        "timestamp": "2026-10-08T21:45:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Tô vendo o Morumbi de fundo e uma área de trabalho meio caótica, Endriw. Mas você não especificou o que quer fazer. Vai abrir o quê aí: o VS Code, o GTA V, ou vai parar de enrolar e me dizer o que precisa?",
+        "timestamp": "2026-10-08T21:45:27"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:52:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T21:52:24"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:52:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, então sigo por aqui. Se precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-08T21:52:25"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:52:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T21:52:26"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:52:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T21:52:27"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:52:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T21:52:29"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:52:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T21:52:30"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:52:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:52:33"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:53:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:53:04"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:53:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:53:04"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:54:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-08T21:54:08"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T21:54:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-08T21:54:09"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T21:54:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T21:54:12"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T21:54:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T21:54:13"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T21:54:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Fechado. Se mudar de ideia ou quiser voltar para o BDD e o MySQL, é só chamar.",
+        "timestamp": "2026-10-08T21:54:20"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T21:54:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T21:54:25"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T21:54:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T21:54:27"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T21:54:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T21:54:59"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T21:54:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T21:54:59"
+    },
+    {
+        "role": "user",
+        "content": "o que voce esta vendo",
+        "timestamp": "2026-10-08T21:56:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Estou vendo uma tela preta com um gato deitado (parece o Garfield) e o texto de cabeça para baixo dizendo \"Looking for the phone\". \n\nEndriw, você está tentando esparelhar ou conectar o celular em algum lugar e caiu nessa tela de espera?",
+        "timestamp": "2026-10-08T21:56:20"
+    },
+    {
+        "role": "user",
+        "content": "vega, oque voce esta vendo",
+        "timestamp": "2026-10-08T21:57:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Estou vendo você encarando a câmera com essa cara séria, Endriw. Desistiu do Garfield e decidiu olhar direto para mim?",
+        "timestamp": "2026-10-08T21:57:55"
+    },
+    {
+        "role": "user",
+        "content": "oque voce esta vendo",
+        "timestamp": "2026-10-08T21:59:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Não consegui responder agora. Tente novamente em alguns segundos.",
+        "timestamp": "2026-10-08T21:59:13"
+    },
+    {
+        "role": "user",
+        "content": "Qual a capital do Brasil",
+        "timestamp": "2026-10-08T21:59:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Brasília.",
+        "timestamp": "2026-10-08T21:59:31"
+    },
+    {
+        "role": "user",
+        "content": "Vega Olha minha tela",
+        "timestamp": "2026-10-08T22:01:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Estou vendo sua área de trabalho, Endriw. Tem um atalho com meu nome ali em cima, mas fora isso você só abriu um monte de jogo e arquivo espalhado. \n\nQual vai ser o foco agora: jogar GTA V, treinar no eFootball ou você vai fingir que vai trabalhar nesses documentos?",
+        "timestamp": "2026-10-08T22:01:41"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:08:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:08:20"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:08:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia ou se precisar de alguma coisa por aí.",
+        "timestamp": "2026-10-08T22:08:23"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:08:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para hoje?",
+        "timestamp": "2026-10-08T22:08:25"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:08:25"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que a gente vai fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-08T22:08:26"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:08:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T22:08:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:08:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:09:18"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:09:20"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:09:20"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:09:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:09:52"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:09:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:09:52"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:10:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se precisar de algo.",
+        "timestamp": "2026-10-08T22:10:27"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:10:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só me chamar.",
+        "timestamp": "2026-10-08T22:10:29"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:10:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Então vamos nessa. O que está na mira agora?",
+        "timestamp": "2026-10-08T22:10:30"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:10:30"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá na dúvida antes que eu decida por você.",
+        "timestamp": "2026-10-08T22:10:32"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:10:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Fechado. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só chamar.",
+        "timestamp": "2026-10-08T22:10:34"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:10:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa quando precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:10:36"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:10:38"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:10:38"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:11:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:11:09"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:11:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:11:09"
+    },
+    {
+        "role": "user",
+        "content": "eai",
+        "timestamp": "2026-10-08T22:13:13"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Tudo certo por aqui. O que manda?",
+        "timestamp": "2026-10-08T22:13:35"
+    },
+    {
+        "role": "user",
+        "content": "oque voce esta vendo",
+        "timestamp": "2026-10-08T22:14:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Estou vendo você encarando a câmera. Qual é a boa de hoje, Endriw?",
+        "timestamp": "2026-10-08T22:14:01"
+    },
+    {
+        "role": "user",
+        "content": "deixa eu ver o celuolar",
+        "timestamp": "2026-10-08T22:15:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Não tem nenhum celular conectado aqui para eu conseguir ver. Se estiver por perto, ajeita a conexão aí.",
+        "timestamp": "2026-10-08T22:15:41"
+    },
+    {
+        "role": "user",
+        "content": "fale as noticias",
+        "timestamp": "2026-10-08T22:15:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Nas notícias de hoje, o cenário político esquentou com a movimentação para o segundo turno das eleições presidenciais de 2026 entre Lula e Flávio Bolsonaro, além da polêmica envolvendo o grupo de dança e criptomoedas. No internacional, a Rússia voltou a bombardear alvos civis na Ucrânia, deixando mais de 30 mortos.",
+        "timestamp": "2026-10-08T22:15:57"
+    },
+    {
+        "role": "user",
+        "content": "Vega quem ganhou o primeiro turno na eleição de 2022",
+        "timestamp": "2026-10-08T22:16:45"
+    },
+    {
+        "role": "assistant",
+        "content": "No primeiro turno de 2022, o Lula ficou na frente com cerca de 48,4% dos votos, e o Jair Bolsonaro veio logo depois com 43,2%. Foi para o segundo turno por pouco.",
+        "timestamp": "2026-10-08T22:16:46"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:19:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:20:04"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:20:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só falar.",
+        "timestamp": "2026-10-08T22:20:09"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:20:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, o que vamos fazer agora?",
+        "timestamp": "2026-10-08T22:20:17"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:20:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decida, Endriw.",
+        "timestamp": "2026-10-08T22:20:25"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:20:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-08T22:20:29"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:20:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:20:33"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:20:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:20:35"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:21:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:21:08"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:21:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:21:08"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:21:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:21:54"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:21:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só me chamar.",
+        "timestamp": "2026-10-08T22:21:56"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:21:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Para onde vamos agora?",
+        "timestamp": "2026-10-08T22:21:58"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:21:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T22:22:00"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:22:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:22:05"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:22:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T22:22:10"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:22:13"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:22:13"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:22:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:22:49"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:22:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:22:49"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:24:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:24:12"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:24:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:24:13"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:24:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim para quê, Endriw? Me dá a letra do que a gente tá resolvendo.",
+        "timestamp": "2026-10-08T22:24:14"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:24:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T22:24:16"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:24:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Tranquilo, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só chamar.",
+        "timestamp": "2026-10-08T22:24:18"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:24:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:24:19"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:24:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:24:22"
+    },
+    {
+        "role": "user",
+        "content": "oque voce esta vendo",
+        "timestamp": "2026-10-08T22:24:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Vejo você aí com a mão no queixo, Endriw, parecendo estar pensando na morte da bezerra ou matutando algum plano mirabolante. \n\nQual é a da vez? Vai me mostrar o que está fazendo ou prefere continuar encarando a câmera?",
+        "timestamp": "2026-10-08T22:24:46"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:24:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:24:55"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:24:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:24:55"
+    },
+    {
+        "role": "user",
+        "content": "oque esta vendo",
+        "timestamp": "2026-10-08T22:25:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Estou vendo uma tela preta mandando você iniciar o Iriun Webcam — e de cabeça para baixo, pelo visto. Abre o aplicativo do Iriun no celular ou no PC para essa imagem sair do lugar.",
+        "timestamp": "2026-10-08T22:25:19"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:25:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:25:26"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:25:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:25:27"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:25:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T22:25:28"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:25:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T22:25:30"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:25:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T22:25:32"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:25:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. O que manda?",
+        "timestamp": "2026-10-08T22:25:33"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:25:37"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:25:37"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:26:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:26:07"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:26:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:26:07"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:29:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T22:29:58"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:29:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:29:59"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:29:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga. O que vamos ver por aí?",
+        "timestamp": "2026-10-08T22:30:00"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:30:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T22:30:01"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:30:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T22:30:04"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:30:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:30:05"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:30:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:30:12"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:30:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:30:50"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:30:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:30:50"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:31:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-08T22:31:16"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:31:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:31:18"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:31:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. O que temos para agora?",
+        "timestamp": "2026-10-08T22:31:20"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:31:20"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vai ser ou vai ficar em cima do muro até quando?",
+        "timestamp": "2026-10-08T22:31:21"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:31:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, se mudar de ideia é só falar.",
+        "timestamp": "2026-10-08T22:31:23"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:31:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:31:24"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:31:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:31:29"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:32:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:32:05"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:32:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:32:05"
+    },
+    {
+        "role": "user",
+        "content": "oque voce esta vendo",
+        "timestamp": "2026-10-08T22:33:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Vejo um quarto com paredes verdes, duas camas de solteiro e um nicho organizador na parede com uma mala vermelha em cima. Qual é a missão de hoje por aí, Endriw? Vai arrumar esse quarto ou só queria conferir se eu estava de olho?",
+        "timestamp": "2026-10-08T22:33:39"
+    },
+    {
+        "role": "user",
+        "content": "abri o youtube e pesquisa por gatinhos no celular",
+        "timestamp": "2026-10-08T22:36:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Abrindo o YouTube.\nPesquisando por gatinhos no celular no YouTube.",
+        "timestamp": "2026-10-08T22:36:32"
+    },
+    {
+        "role": "user",
+        "content": "tira pritn",
+        "timestamp": "2026-10-08T22:36:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:37:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise quando precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:37:01"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:37:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Prontinho, print tirado.",
+        "timestamp": "2026-10-08T22:37:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, tô por aqui se precisar de algo.",
+        "timestamp": "2026-10-08T22:37:02"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:37:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga lá, Endriw. O que vamos resolver agora?",
+        "timestamp": "2026-10-08T22:37:03"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:37:03"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Vai querer decidir alguma coisa ou vai ficar só no suspense?",
+        "timestamp": "2026-10-08T22:37:05"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:37:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia e quiser voltar para o BDD ou para o MySQL, é só falar.",
+        "timestamp": "2026-10-08T22:37:06"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:37:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:37:07"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:37:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:37:13"
+    },
+    {
+        "role": "user",
+        "content": "tira print do pc",
+        "timestamp": "2026-10-08T22:37:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Tirei um print da tela e abri aqui.",
+        "timestamp": "2026-10-08T22:37:17"
+    },
+    {
+        "role": "user",
+        "content": "deixa eu ver o celular",
+        "timestamp": "2026-10-08T22:37:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Prontinho, espelhei a tela do celular aqui para você ver.",
+        "timestamp": "2026-10-08T22:37:34"
+    },
+    {
+        "role": "user",
+        "content": "espelha a tela",
+        "timestamp": "2026-10-08T22:37:42"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:37:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:37:45"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:37:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:37:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Prontinho, tela espelhada.",
+        "timestamp": "2026-10-08T22:37:46"
+    },
+    {
+        "role": "user",
+        "content": "Desligue o PC",
+        "timestamp": "2026-10-08T22:38:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Confirme a ação perigosa e informe o PIN para continuar.",
+        "timestamp": "2026-10-08T22:38:37"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:41:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-08T22:41:46"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:41:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, estou por aqui. É só chamar quando precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:41:47"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:41:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Então manda a braba. Do que a gente vai cuidar agora?",
+        "timestamp": "2026-10-08T22:41:49"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:41:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decidir do que estamos falando, me avisa.",
+        "timestamp": "2026-10-08T22:41:50"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:41:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que você quer fazer agora?",
+        "timestamp": "2026-10-08T22:41:52"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:41:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-08T22:41:53"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:41:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:41:58"
+    },
+    {
+        "role": "user",
+        "content": "Desligue o PC",
+        "timestamp": "2026-10-08T22:42:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Confirme a ação perigosa e informe o PIN para continuar.",
+        "timestamp": "2026-10-08T22:42:13"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:42:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:42:41"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:42:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:42:41"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:43:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-08T22:43:20"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-08T22:43:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-08T22:43:24"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-08T22:43:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Pois então, fala logo o que é para eu fazer.",
+        "timestamp": "2026-10-08T22:43:25"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-08T22:43:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Se decida, Endriw.",
+        "timestamp": "2026-10-08T22:43:26"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-08T22:43:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:43:29"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-08T22:43:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-08T22:43:30"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-08T22:43:40"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-08T22:43:40"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-08T22:44:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-08T22:44:28"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-08T22:44:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-08T22:44:28"
+    },
+    {
+        "role": "user",
+        "content": "Vega desliga o PC",
+        "timestamp": "2026-10-08T22:46:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Confirme a ação perigosa e informe o PIN para continuar.",
+        "timestamp": "2026-10-08T22:46:04"
+    }
+]

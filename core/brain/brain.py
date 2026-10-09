@@ -5,6 +5,9 @@ import os
 import threading
 
 from core.brain.ai import VegaAI
+from core.brain.action_narration import narrate_action_result
+from core.brain.tool_receipt import build_receipt
+from config.cognitive import mode_is_generated
 from core.brain.conversation import Conversation
 from core.memory.memory import VegaMemory
 from core.actions.commands import VegaCommands
@@ -12,6 +15,9 @@ from core.actions.commands_parser import VegaCommandsParser
 from core.actions.modes import VegaModes
 from core.brain.text_utils import normalize_text, remove_vega_prefix, is_short_nonsense
 from core.brain.time_answer import answer_time_or_date_question, portuguese_number
+from core.brain.visual_triggers import classify_visual_request
+from core.knowledge import KnowledgeBase
+from core.brain import number_words as BrainNumberWords
 from core.memory.memory_context import inject_memory
 from core.brain.brain_view import is_brain_view_request
 from core.memory.daily_query import DailyQuery
@@ -21,6 +27,7 @@ from config.personality import is_serious_context, evolve_personality
 from tools.api_tools import build_tool_registry
 from core.actions.scheduler import VegaScheduler
 from core.actions.daily_support import VegaDailySupport
+from core.actions.task_workflow import TaskWorkflow
 from tools.productivity import ProductivityTools
 from core.security.security import VegaSecurity
 from core.security.file_security import FileSecurity
@@ -49,6 +56,10 @@ class VegaBrain:
         self.ai = VegaAI()
 
         self.memory = VegaMemory()
+        # Base de conhecimento (RAG local): documentos, páginas e transcrições
+        # que o usuário ingeriu. Dá à VEGA o que ela não sabia: responder sobre
+        # o conteúdo de um PDF ou artigo, citando a origem.
+        self.knowledge = KnowledgeBase()
         self.brain_view_callback = None
         self.database_view_callback = None
         self.daily_query = DailyQuery(self.memory)
@@ -61,10 +72,16 @@ class VegaBrain:
         self.current_trace = None
         self.daily_support = VegaDailySupport()
         self.productivity = ProductivityTools()
+        self.task_workflow = TaskWorkflow(
+            scheduler=None,
+            mode_callback=self._activate_work_mode_from_task,
+        )
         self.environment_callback = None
         self.holographic_command_callback = None
         self.tool_result_callback = None
         self.camera_frame_callback = None
+        # Canvas de desenho ao vivo (Fase 3): janela própria, orbe intocado.
+        self.canvas_callback = None
         self.scheduler_notification_callback = None
         self._response_cancelled = threading.Event()
         self._process_stream_lock = threading.RLock()
@@ -83,15 +100,33 @@ class VegaBrain:
             self.commands
         )
 
-        self.tool_manager = build_tool_registry(homework_handler=self.commands.solve_homework)
-        self.orchestrator = AgentOrchestrator()
+        self.tool_manager = build_tool_registry(
+            homework_handler=self.commands.solve_homework,
+            knowledge_base=self.knowledge,
+        )
+        # ATENÇÃO: `self.orchestrator` é o ConversationOrchestrator (contexto,
+        # referências, cancelamento e anti-repetição) — criado acima.
+        # Antes, esta linha sobrescrevia ele com o AgentOrchestrator, e toda
+        # fala morria em "'AgentOrchestrator' object has no attribute
+        # 'classify_turn_intent'". O de agentes fica em atributo próprio.
+        self.agent_orchestrator = AgentOrchestrator()
         self.last_screen_summary = None
+        # Último dado verificado por ferramenta (cotação, clima...). Permite que
+        # a IA responda "e por que isso?" no turno seguinte usando o valor real.
+        self.last_tool_receipt = None
+        # Último comando local (brilho/volume): permite "aumenta mais" resolver
+        # localmente, sem IA e sem custo.
+        self.last_local_command = None
+        # Questions de sim/não feitas pela VEGA (ex.: "ler as notícias?").
+        # O cérebro lembra da PRÓPRIA pergunta: assim a resposta funciona por
+        # voz, texto ou qualquer timing — não depende do loop de captura.
+        self._pending_question = None
         self.security = VegaSecurity()
         self._pending_dangerous_action = None
         self._last_opened_app = None
         self._pending_close_app = None
         self.scheduler = VegaScheduler(on_due=self._on_scheduled_item)
-
+        self.task_workflow.scheduler = self.scheduler
         # Segurança do controle do celular: exige PIN + rosto uma vez por
         # sessão, e revoga quando o aparelho é desconectado.
         from core.connectivity.security_gate import PhoneAccessGuard
@@ -100,6 +135,65 @@ class VegaBrain:
         # Monitor de conexão: o MIUI desliga a depuração sem fio sozinho,
         # então a VEGA tenta reconectar em segundo plano.
         self.phone_monitor = None
+        # Modo live (conversa em tempo real): None até ser ligado. O callback
+        # de ferramenta é o gancho que faz o desenho ao vivo aparecer na tela.
+        self.live_session = None
+        self.live_tool_callback = self._on_live_tool_call
+
+    # ==========================================================
+    # MODO LIVE (conversa em tempo real)
+    # ==========================================================
+    # O modo live é ADITIVO: o pipeline de turnos continua sendo o padrão, e
+    # este caminho só é usado quando ligado explicitamente. Ele não toca em
+    # nada do fluxo atual — apenas abre uma sessão contínua à parte.
+
+    def start_live_mode(self, video_mode=None, on_text=None, on_status=None):
+        """Liga o modo live. Devolve True se a sessão iniciou."""
+        existing = getattr(self, "live_session", None)
+        if existing is not None and existing.is_running:
+            return True
+        try:
+            from core.brain.live_session import build_live_session
+            session = build_live_session(
+                self, on_text=on_text, on_status=on_status, video_mode=video_mode
+            )
+        except Exception as error:
+            print(f"[VEGA Live] Não foi possível preparar: {error}")
+            return False
+        self.live_session = session
+        return session.start()
+    def stop_live_mode(self):
+        """Encerra o modo live, se estiver ativo."""
+        session = getattr(self, "live_session", None)
+        if session is not None:
+            try:
+                session.stop()
+            except Exception:
+                pass
+
+    def live_mode_active(self):
+        session = getattr(self, "live_session", None)
+        return bool(session is not None and session.is_running)
+
+    def _on_live_tool_call(self, name, arguments, result):
+        """Reage a uma ferramenta executada DURANTE a conversa contínua.
+
+        É o que faz a VEGA desenhar ao vivo: quando o modelo chama `draw_image`
+        no meio da conversa, o desenho aparece na tela enquanto ela fala. Sem
+        este gancho, o modelo poderia pedir o desenho e ele nunca seria visto.
+        """
+        if str(name or "") != "draw_image" or not isinstance(arguments, dict):
+            return
+        callback = getattr(self, "canvas_callback", None)
+        if not callable(callback):
+            return
+        try:
+            callback(str(arguments.get("title") or "Desenho"), {
+                "title": str(arguments.get("title") or "Desenho"),
+                "shapes": arguments.get("shapes") or [],
+            })
+        except Exception as error:
+            print(f"[VEGA Live] Não consegui desenhar ao vivo: {error}")
 
     def start_phone_monitor(self, interval=90.0):
         """Liga o monitor de conexão do celular (chamado no startup da VEGA)."""
@@ -142,6 +236,27 @@ class VegaBrain:
             except Exception as error:
                 print(f"[VEGA] Não foi possível exibir o resultado: {error}")
 
+    def _narrate_local_result(self, user_text, factual_result, *, spend_tokens=True):
+        """Narra o fato de uma ação já concluída, sem alterar a execução."""
+        return narrate_action_result(
+            getattr(self, "ai", None),
+            user_text,
+            factual_result,
+            enabled=mode_is_generated() and spend_tokens,
+        )
+
+    def _handle_task_workflow(self, text):
+        workflow = getattr(self, "task_workflow", None)
+        if workflow is None:
+            return None
+        return workflow.handle(text)
+
+    def _activate_work_mode_from_task(self):
+        try:
+            return VegaModes.trabalho(self.commands)
+        except Exception as error:
+            print(f"[VEGA] Não consegui ativar o modo Trabalho pelo fluxo: {error}")
+            return None
     def _on_scheduled_item(self, item):
         self.memory.add_daily_message("system", f"Lembrete: {item.get('text', '')}")
         callback = getattr(self, "scheduler_notification_callback", None)
@@ -281,86 +396,25 @@ class VegaBrain:
         return f"Você quer que eu feche o {last_app}?"
 
     def _is_visual_analysis_request(self, normalized):
-        if not normalized:
-            return False
+        """A fala pede análise visual (tela ou câmera)?
 
-        if "mapa mental" in normalized and self.last_screen_summary:
-            return True
-
-        triggers = (
-            "olha isso na minha tela",
-            "olha isso na tela",
-            "olha a minha tela",
-            "olha a tela",
-            "analisa a tela",
-            "analisa minha tela",
-            "o que está na minha tela",
-            "o que tem na minha tela",
-            "olha o que está na tela",
-            "olha isso",
-            "o que tem de errado aqui",
-            "oq tem de errado aqui",
-            "oq tem errado aqui",
-            "o que esta errado aqui",
-            "o que tem de errado nisso",
-            "me ajuda com isso",
-            "me ajuda aqui",
-            "me ajuda com esse codigo",
-            "me ajuda com esse trabalho",
-            "me ajuda com essa atividade",
-            "revisa esse codigo",
-            "analisa esse codigo",
-            "corrige esse erro",
-            "o que eu faco aqui",
-            "qual o proximo passo",
-            "como eu continuo daqui",
-            "o que voce esta vendo na camera",
-            "o que voce esta vendo na minha camera",
-            "o que vc esta vendo na camera",
-            "o que vc esta vendo na minha camera",
-            "oq vc esta vendo na camera",
-            "oq vc esta vendo na minha camera",
-            "o que esta vendo na camera",
-            "descreve a camera",
-            "analisa a camera",
-            "olha pela camera",
-            "o que aparece na webcam",
-            "o que tem na webcam",
-        )
-
-        def fold_accents(value):
-            return "".join(
-                character
-                for character in unicodedata.normalize("NFKD", value)
-                if not unicodedata.combining(character)
-            )
-
-        search_text = fold_accents(normalized)
-        return any(fold_accents(trigger) in search_text for trigger in triggers)
+        Delega ao catálogo único de gatilhos (`core.brain.visual_triggers`).
+        Antes, as frases viviam em três listas duplicadas aqui dentro — cada
+        uma com diferenças de acentuação — e manter as três em sincronia era
+        impossível. O gatilho agora é DADO, não `if`.
+        """
+        return classify_visual_request(
+            normalized,
+            has_previous_summary=bool(getattr(self, "last_screen_summary", None)),
+        ).is_visual
 
     def _is_camera_analysis_request(self, normalized):
-        folded = "".join(
-            character
-            for character in unicodedata.normalize("NFKD", normalized or "")
-            if not unicodedata.combining(character)
-        )
-        return any(
-            trigger in folded
-            for trigger in (
-                "o que voce esta vendo na camera",
-                "o que voce esta vendo na minha camera",
-                "o que vc esta vendo na camera",
-                "o que vc esta vendo na minha camera",
-                "oq vc esta vendo na camera",
-                "oq vc esta vendo na minha camera",
-                "o que esta vendo na camera",
-                "descreve a camera",
-                "analisa a camera",
-                "olha pela camera",
-                "o que aparece na webcam",
-                "o que tem na webcam",
-            )
-        )
+        """A fala pede visão da CÂMERA (e não da tela)?
+
+        A regra "tela vence câmera" é garantida por construção no catálogo:
+        qualquer menção a tela/monitor/print desqualifica a câmera.
+        """
+        return classify_visual_request(normalized).wants_camera
 
     def _visual_request_image(self, text, image=None):
         camera_request = self._is_camera_analysis_request(self._normalize_text(text))
@@ -503,7 +557,16 @@ class VegaBrain:
             return "Estou ouvindo."
 
         if self._is_short_nonsense(normalized):
+            # Antes de descartar: pode ser resposta a uma pergunta pendente
+            # ("sim", "quero", "ok" são falas curtas legítimas aqui).
+            pending_answer = self._answer_pending_question(normalized)
+            if pending_answer is not None:
+                return pending_answer
             return "Estou ouvindo."
+
+        pending_answer = self._answer_pending_question(normalized)
+        if pending_answer is not None:
+            return pending_answer
 
         security_response = self._process_security_request(normalized)
         if security_response is not None:
@@ -528,12 +591,16 @@ class VegaBrain:
             callback = getattr(self, "database_view_callback", None)
             if callback:
                 callback()
-            return "Abrindo meu banco de dados no MySQL."
+            return self._narrate_local_result(
+                text, "Abrindo meu banco de dados no MySQL."
+            )
 
         if is_brain_view_request(text):
             if self.brain_view_callback:
                 self.brain_view_callback()
-            return "Abrindo a visualização do meu segundo cérebro."
+            return self._narrate_local_result(
+                text, "Abrindo a visualização do meu segundo cérebro."
+            )
 
         time_date_response = self._answer_time_or_date_question(normalized)
         if time_date_response is not None:
@@ -542,7 +609,9 @@ class VegaBrain:
         daily_response = self.daily_query.answer(text)
         if daily_response is not None:
             return daily_response
-
+        workflow_response = self._handle_task_workflow(text)
+        if workflow_response is not None:
+            return workflow_response
         if normalized in {
             "sair",
             "exit",
@@ -571,9 +640,8 @@ class VegaBrain:
         if scheduler_response is not None:
             return scheduler_response
 
-        security_response = self._process_security_request(normalized)
-        if security_response is not None:
-            return security_response
+        # _process_security_request já foi avaliado no início deste fluxo;
+        # repeti-lo aqui só duplicava trabalho (a resposta não muda).
         support_response = self._process_daily_support_request(text)
         if support_response is not None:
             return support_response
@@ -594,12 +662,22 @@ class VegaBrain:
         # COMANDOS
         # ======================================================
 
+        # "aumenta mais" após comando local: resolução local, custo zero.
+        continuation_response = self._resolve_local_continuation(normalized)
+        if continuation_response is not None:
+            self.orchestrator.complete_task()
+            self._record_local_turn(text, continuation_response, kind="command")
+            return continuation_response
+
         command_response = self._process_command(
             normalized
         )
 
         if command_response is not None:
-
+            self.orchestrator.complete_task()
+            # A VEGA lembra do que disse: sem isto, "aumenta o volume" + "aumenta
+            # mais" deixava a IA sem "mais o quê?" (mesmo bug da cotação).
+            self._record_local_turn(text, command_response, kind="command")
             return command_response
 
         # ======================================================
@@ -611,68 +689,19 @@ class VegaBrain:
         )
 
         if tool_response is not None:
-
+            self.orchestrator.complete_task()
             return tool_response
 
-        if self.orchestrator.is_complex_task(text):
-            return self.orchestrator.handle_task(text)
+        if self.agent_orchestrator.is_complex_task(text):
+            return self.agent_orchestrator.handle_task(text)
 
         # ======================================================
         # MEMÓRIA
         # ======================================================
 
-        self.memory.add_daily_message(
-            "user",
-            text
-        )
+        self._register_user_turn(text, rewritten=None)
 
-        self.conversation.add_user_message(
-            text
-        )
-
-        self.agent_state.observe(text)
-        self._update_context_state(text)
-
-        messages = (
-            self.conversation.get_messages()
-        )
-
-        memory_context = (
-            self.memory.build_memory_context(
-                text
-            )
-        )
-        relevant_memories = self.memory.retrieve_relevant(text, limit=4)
-        contextual_memories = self.memory.contextual_recall(text, limit=4)
-        context_summary = self.conversation.context.snapshot()
-
-        if memory_context or relevant_memories:
-            messages = self._inject_memory(
-                messages,
-                memory_context,
-                context_summary,
-                relevant_memories,
-            )
-
-        agent_prompt = self.agent_state.render_context_prompt()
-        if agent_prompt:
-            messages.insert(0, {
-                "role": "system",
-                "content": agent_prompt,
-            })
-
-        if contextual_memories:
-            contextual_summary = "MEMÓRIA CONTEXTUAL RELEVANTE:\n" + "\n".join(f"- {item['key']}: {item['summary']}" for item in contextual_memories)
-            messages.insert(0, {
-                "role": "system",
-                "content": contextual_summary,
-            })
-
-        if is_serious_context(text):
-            messages.insert(0, {
-                "role": "system",
-                "content": "O contexto parece sério ou urgente. Reduza humor e sarcasmo, seja clara, cuidadosa e objetiva.",
-            })
+        messages = self._prepare_messages(text)
 
         # ======================================================
         # IA
@@ -741,6 +770,8 @@ class VegaBrain:
         normalized = self._normalize_text(text)
         normalized = self._remove_vega_prefix(normalized)
 
+        # Conteúdo necessário para decidir se uma fala curta pertence à conversa
+        # anterior. É calculado aqui uma única vez, antes da fala atual ser salva.
         if not normalized and image is None:
             yield "Estou ouvindo."
 
@@ -750,33 +781,42 @@ class VegaBrain:
             yield from self._handle_visual_request_stream(text, image=image)
             return
 
-        if normalized in {
-            "ue",
-            "ué",
-            "ta",
-            "tá",
-            "ue ta",
-            "ue, ta",
-            "ué ta",
-            "ué, tá",
-            "ué, ta",
-            "ta bom",
-            "tá bom",
-            "oi",
-            "olá",
-            "ola",
-            "hey",
-            "ok",
-            "td",
-            "tudo bem",
-            "tudo",
-            "tá tudo",
-        }:
+        short_acknowledgement = normalized in {
+            "ue", "ué", "ta", "tá", "ue ta", "ue, ta", "ué ta", "ué, tá",
+            "ta bom", "tá bom", "oi", "olá", "ola", "hey", "ok", "td",
+            "tudo bem", "tudo", "tá tudo",
+        }
+        allow_contextual_short_reply = False
+        if mode_is_generated() and (short_acknowledgement or self._is_short_nonsense(normalized)):
+            allow_contextual_short_reply = bool(self.conversation.get_messages())
+        if short_acknowledgement and not allow_contextual_short_reply:
             yield "Estou ouvindo."
             return
-
         if self._is_short_nonsense(normalized) and image is None:
-            yield "Estou ouvindo."
+            if not allow_contextual_short_reply:
+                yield "Estou ouvindo."
+                return
+
+        # ======================================================
+        # RESPOSTA A PERGUNTA PENDENTE ("quer ler as notícias?" -> "quero sim")
+        # O cérebro lembra das PRÓPRIAS perguntas. A resposta é reconhecida em
+        # qualquer posição da fala ("oi vega, quero sim") e funciona por voz,
+        # texto ou qualquer timing. Antes isto só existia no loop de voz do
+        # vega.py e morria quando a fala chegava em outro momento.
+        # ======================================================
+
+        pending_answer = self._answer_pending_question(normalized)
+        if pending_answer is not None:
+            yield pending_answer
+            return
+
+        # PORTÃO ÚNICO DE SEGURANÇA (mesmo do fluxo de comandos).
+        # Se a fala é perigosa, aplica segurança e para; se já está liberada,
+        # devolve None e a tarefa segue normalmente. O PIN nunca é enviado
+        # para a IA: ele morre aqui, no processo local.
+        gate_response = self._phone_security_gate(normalized)
+        if gate_response is not None:
+            yield gate_response
             return
 
         security_response = self._process_security_request(normalized)
@@ -790,18 +830,20 @@ class VegaBrain:
 
         support_response = self._process_daily_support_request(text)
         if support_response is not None:
-            yield support_response
+            yield self._narrate_local_result(text, support_response)
             return
-
+        workflow_response = self._handle_task_workflow(text)
+        if workflow_response is not None:
+            yield workflow_response
+            return
         if self._is_holographic_environment_request(normalized):
             if self.environment_callback:
                 self.environment_callback()
-            yield "Ambiente holográfico inicializado."
+            yield self._narrate_local_result(text, "Ambiente holográfico inicializado.")
             return
-
         holo_response = self._process_holographic_interaction_command(normalized)
         if holo_response is not None:
-            yield holo_response
+            yield self._narrate_local_result(text, holo_response)
             return
 
         if self._is_visual_analysis_request(normalized):
@@ -812,15 +854,13 @@ class VegaBrain:
             callback = getattr(self, "database_view_callback", None)
             if callback:
                 callback()
-            yield "Abrindo meu banco de dados no MySQL."
+            yield self._narrate_local_result(text, "Abrindo meu banco de dados no MySQL.")
             return
-
         if is_brain_view_request(text):
             if self.brain_view_callback:
                 self.brain_view_callback()
-            yield "Abrindo a visualização do meu segundo cérebro."
+            yield self._narrate_local_result(text, "Abrindo a visualização do meu segundo cérebro.")
             return
-
         time_date_response = self._answer_time_or_date_question(normalized)
         if time_date_response is not None:
             yield time_date_response
@@ -863,16 +903,12 @@ class VegaBrain:
             yield scheduler_response
             return
 
-        security_response = self._process_security_request(normalized)
-        if security_response is not None:
-            yield security_response
-            return
-
+        # _process_security_request já foi avaliado no início deste fluxo;
+        # repeti-lo aqui só duplicava trabalho (a resposta não muda).
         if self._is_recycle_bin_request(normalized):
             if not file_access.ALLOW_PERSONAL_FILE_CHANGES:
                 yield self._file_changes_disabled_response()
                 return
-            yield "Vou preparar o esvaziamento da Lixeira."
             yield self._process_recycle_bin_request()
             return
 
@@ -880,6 +916,8 @@ class VegaBrain:
             if not file_access.ALLOW_PERSONAL_FILE_CHANGES:
                 yield self._file_changes_disabled_response()
                 return
+            # A busca varre o disco e pode demorar: avisa ANTES de procurar,
+            # para o usuário não ficar no silêncio achando que travou.
             yield "Vou procurar esse arquivo agora."
             file_response = self._process_file_delete_request(normalized)
             if file_response is not None:
@@ -895,8 +933,9 @@ class VegaBrain:
         )
 
         if mode_response is not None:
-
-            yield mode_response
+            mode_narrated = self._narrate_local_result(text, mode_response) or mode_response
+            self._record_local_turn(text, mode_narrated, kind="mode")
+            yield mode_narrated
 
             return
 
@@ -904,17 +943,53 @@ class VegaBrain:
         # COMANDOS
         # ======================================================
 
+        # "aumenta mais" / "diminui de novo" após um comando local: resolvido
+        # AQUI, de graça, reaproveitando o domínio (brilho/volume) da última
+        # ação. Sem isto, a fala curta escapava para a IA sem "mais o quê?".
+        continuation_response = self._resolve_local_continuation(normalized)
+        if continuation_response is not None:
+            self.orchestrator.complete_task()
+            narrated = self._narrate_local_result(text, continuation_response) or continuation_response
+            self._record_local_turn(text, narrated, kind="command")
+            yield narrated
+            return
+
         command_response = self._process_command(
             normalized
         )
 
         if command_response is not None:
-
-            yield command_response
+            # A intenção e a ação permanecem locais; só a fala que narra o
+            # resultado verificado pode ser gerada pelo modelo.
+            self.orchestrator.complete_task()
+            narrated = (
+                command_response
+                if (
+                    self._is_sensitive_command(normalized)
+                    or self._is_close_confirmation(normalized)
+                    or self._is_close_rejection(normalized)
+                    or self._is_implicit_close_request(normalized)
+                )
+                else (self._narrate_local_result(text, command_response) or command_response)
+            )
+            # Registra o turno ANTES de responder: a VEGA lembra do que disse,
+            # então "aumenta o volume" + "aumenta mais" funciona (a IA sabe que
+            # "mais" = volume). Era o mesmo buraco do bug da cotação, no
+            # caminho de comandos locais.
+            self._record_local_turn(text, narrated, kind="command")
+            yield narrated
             return
 
         tool_response = self._process_tool_request(normalized)
         if tool_response is not None:
+            # ANTES: só "complete_task + yield + return". O turno nunca era
+            # registrado no orquestrador, então "e por que isso?" no turno
+            # seguinte caía em contexto perdido (context_misses) e a IA
+            # respondia "porque o quê?". Agora o turno da ferramenta entra no
+            # histórico da conversa contínua, igual ao caminho de process().
+            self.orchestrator.record_user_turn(normalized)
+            self.orchestrator.record_assistant_turn(tool_response)
+            self.orchestrator.complete_task()
             yield tool_response
             return
 
@@ -946,6 +1021,19 @@ class VegaBrain:
         if not was_rewritten and intent == "continuation" and self.orchestrator.task.state != "pending":
             SESSION_METRICS.record(context_misses=1)
 
+        # Consultas consecutivas a ferramentas também fazem parte do diálogo:
+        # anexe o turno anterior ao contexto, mesmo quando não há uma nova chamada
+        # ao modelo (ex.: "por que o dólar está nesse valor?").
+        if intent == "continuation" and not was_rewritten:
+            recent_user_turns = [
+                item for item in self.orchestrator.immediate
+                if item.get("role") == "user"
+            ]
+            if recent_user_turns:
+                previous_question = recent_user_turns[-1].get("original", "").strip()
+                if previous_question:
+                    rewritten_text = f"{previous_question} — continuação: {normalized}"
+                    was_rewritten = True
         if intent == "new" and self._looks_like_action_command(normalized):
             self.orchestrator.start_task("command", target=normalized[:80])
 
@@ -955,58 +1043,9 @@ class VegaBrain:
         # MEMÓRIA / IA
         # ======================================================
 
-        self.memory.add_daily_message(
-            "user",
-            text
-        )
+        self._register_user_turn(text, rewritten=rewritten_text)
 
-        self.conversation.add_user_message(
-            rewritten_text
-        )
-
-        self.agent_state.observe(text)
-        self._update_context_state(text)
-
-        messages = (
-            self.conversation.get_messages()
-        )
-
-        memory_context = (
-            self.memory.build_memory_context(
-                text
-            )
-        )
-        relevant_memories = self.memory.retrieve_relevant(text, limit=4)
-        contextual_memories = self.memory.contextual_recall(text, limit=4)
-        context_summary = self.conversation.context.snapshot()
-
-        if memory_context or relevant_memories:
-            messages = self._inject_memory(
-                messages,
-                memory_context,
-                context_summary,
-                relevant_memories,
-            )
-
-        agent_prompt = self.agent_state.render_context_prompt()
-        if agent_prompt:
-            messages.insert(0, {
-                "role": "system",
-                "content": agent_prompt,
-            })
-
-        if contextual_memories:
-            contextual_summary = "MEMÓRIA CONTEXTUAL RELEVANTE:\n" + "\n".join(f"- {item['key']}: {item['summary']}" for item in contextual_memories)
-            messages.insert(0, {
-                "role": "system",
-                "content": contextual_summary,
-            })
-
-        if is_serious_context(text):
-            messages.insert(0, {
-                "role": "system",
-                "content": "O contexto parece sério ou urgente. Reduza humor e sarcasmo, seja clara, cuidadosa e objetiva.",
-            })
+        messages = self._prepare_messages(text)
 
         trace.mark("context_ready")
 
@@ -1071,6 +1110,98 @@ class VegaBrain:
     # ORQUESTRAÇÃO CONVERSACIONAL
     # ==========================================================
 
+    # ==========================================================
+    # REGISTRO DO TURNO + MONTAGEM DAS MENSAGENS
+    # (antes duplicado no `process` e no `_process_stream_locked`)
+    # ==========================================================
+
+    def _register_user_turn(self, text, rewritten=None):
+        """Registra a fala do usuário em memória, conversa e estado."""
+        self.memory.add_daily_message("user", text)
+        self.conversation.add_user_message(rewritten or text)
+        self.agent_state.observe(text)
+        self._update_context_state(text)
+
+    def _prepare_messages(self, text):
+        """Monta as mensagens para o modelo com memória e contexto."""
+        messages = list(self.conversation.get_messages())
+
+        memory_context = self.memory.build_memory_context(text)
+        relevant_memories = self.memory.retrieve_relevant(text, limit=4)
+        contextual_memories = self.memory.contextual_recall(text, limit=4)
+        context_summary = self.conversation.context.snapshot()
+
+        if memory_context or relevant_memories:
+            messages = self._inject_memory(
+                messages,
+                memory_context,
+                context_summary,
+                relevant_memories,
+            )
+
+        agent_prompt = self.agent_state.render_context_prompt()
+        if agent_prompt:
+            messages.insert(0, {
+                "role": "system",
+                "content": agent_prompt,
+            })
+
+        if contextual_memories:
+            contextual_summary = "MEMÓRIA CONTEXTUAL RELEVANTE:\n" + "\n".join(
+                f"- {item['key']}: {item['summary']}" for item in contextual_memories
+            )
+            messages.insert(0, {
+                "role": "system",
+                "content": contextual_summary,
+            })
+
+        if is_serious_context(text):
+            messages.insert(0, {
+                "role": "system",
+                "content": (
+                    "O contexto parece sério ou urgente. Reduz humor e sarcasmo, "
+                    "seja clara, cuidadosa e objetiva."
+                ),
+            })
+
+        # Dado verificado pela última ferramenta (cotação, clima...). Vem por
+        # último para ficar mais próximo da fala atual: é o antecedente mais
+        # provável de "e por que isso?", "isso vai subir?", "e amanhã?".
+        receipt_context = self._tool_receipt_context()
+        if receipt_context:
+            messages.insert(0, {
+                "role": "system",
+                "content": receipt_context,
+            })
+
+        # Conhecimento ingerido (PDF, páginas, transcrições). Vem antes das
+        # memórias no prompt: é FONTE, não lembrança, e deve poder responder
+        # perguntas sobre o conteúdo que o usuário forneceu.
+        knowledge_context = self._knowledge_context(text)
+        if knowledge_context:
+            messages.insert(0, {
+                "role": "system",
+                "content": knowledge_context,
+            })
+
+        return messages
+
+    def _knowledge_context(self, text):
+        """Bloco de contexto com o conhecimento ingerido relevante à fala.
+
+        Devolve "" quando não há nada relevante — nunca inventa contexto.
+        """
+        knowledge = getattr(self, "knowledge", None)
+        if knowledge is None:
+            return ""
+        try:
+            if knowledge.is_empty():
+                return ""
+            return knowledge.build_context(text)
+        except Exception as error:
+            print(f"[VEGA Conhecimento] Falha ao montar contexto: {error}")
+            return ""
+
     def _looks_like_action_command(self, text):
         """Detecta falas que iniciam uma ação/tarefa (para o contexto de tarefa)."""
         if not text:
@@ -1092,9 +1223,9 @@ class VegaBrain:
         return portuguese_number(value)
 
     @staticmethod
-    @staticmethod
     def _is_short_nonsense(text):
         return is_short_nonsense(text)
+
     @staticmethod
     def _answer_time_or_date_question(text):
         return answer_time_or_date_question(text)
@@ -1244,6 +1375,15 @@ class VegaBrain:
             return None
         try:
             params = self._build_tool_parameters(text, tool)
+            # Ferramentas que exigem ESTRUTURA (listas de slides, linhas de
+            # planilha, formas de desenho) não podem ser montadas por regex a
+            # partir da fala: quem monta a estrutura é o modelo, via chamada de
+            # ferramenta. O marcador "request" sinaliza isso — o turno segue
+            # para a IA em vez de executar com parâmetros inventados (era a
+            # causa de "unexpected keyword argument 'content'" e de "missing
+            # required positional arguments: 'title' and 'rows'").
+            if "request" in params:
+                return None
             result = tool.implementation(**params)
             if tool.name == "report":
                 self.memory.add_report_event(result)
@@ -1252,10 +1392,232 @@ class VegaBrain:
                     self.tool_result_callback(tool.name, result)
                 except Exception as error:
                     print(f"[VegaTools] Não foi possível exibir o resultado: {error}")
-            return self._format_tool_result(tool, result)
+            response = self._format_tool_result(tool, result)
+            # Recibo estruturado do dado obtido: é o que permite a IA responder
+            # "e por que isso?" no turno seguinte sem depender do modo cognitivo.
+            self._store_tool_receipt(tool.name, result, user_question=text)
+            # Guarde respostas de ferramentas no histórico conversacional: perguntas
+            # seguintes podem se referir à consulta recém-executada.
+            if hasattr(self, "conversation") and hasattr(self, "orchestrator"):
+                self._register_user_turn(text, rewritten=None)
+                self.conversation.add_assistant_message(response)
+                self.memory.add_daily_message("assistant", response)
+                self.orchestrator.record_user_turn(text)
+                self.orchestrator.record_assistant_turn(response)
+                if tool.name == "currency" and isinstance(result, dict):
+                    self.orchestrator.start_task(
+                        "currency_quote",
+                        target=params.get("base", result.get("base", "USD")),
+                        result=response,
+                    )
+                    self.orchestrator.complete_task()
+            return response
         except Exception as error:
             print(f"[VegaTools] Erro na ferramenta {tool.name}: {error}")
             return f"Não consegui usar a ferramenta {tool.name} agora: {error}"
+
+    # ==========================================================
+    # RECIBO DE FERRAMENTA (dado verificado para o próximo turno)
+    # ==========================================================
+
+    # ==========================================================
+    # REGISTRO DE TURNO LOCAL (a VEGA lembra o que disse e fez)
+    # ==========================================================
+
+    def _record_local_turn(self, user_text, response, *, kind="command", target=None):
+        """Registra um turno resolvido LOCALMENTE em todos os registros.
+
+        Problema que resolve: comandos locais ("aumenta o volume", "aumenta o
+        brilho") executam com custo zero e respondem — mas antes deste método
+        NÃO deixavam registro nenhum no contexto de conversa. Quando o usuário
+        emendava "aumenta mais", a IA não tinha "mais o quê?" — exatamente o
+        mesmo bug da cotação, só que no caminho de comandos.
+
+        Registra em:
+          - conversation (histórico que vai ao modelo);
+          - orchestrator (turnos, tarefa atual e antecedente de referência);
+          - memória diária.
+        """
+        if not isinstance(response, str) or not response.strip():
+            return
+
+        text = str(user_text or "").strip()
+
+        # 1. Histórico de conversa (o que o modelo enxerga no próximo turno).
+        if hasattr(self, "conversation"):
+            self.conversation.add_user_message(text)
+            self.conversation.add_assistant_message(response)
+
+        # 2. Orquestrador: turnos + tarefa + antecedente de "mais", "isso".
+        orchestrator = getattr(self, "orchestrator", None)
+        if orchestrator is not None:
+            try:
+                orchestrator.record_user_turn(text)
+                orchestrator.record_assistant_turn(response)
+                if target:
+                    orchestrator.start_task(kind, target=str(target))
+                    orchestrator.complete_task()
+            except Exception as error:
+                print(f"[VEGA Memória] Falha ao registrar turno local: {error}")
+
+        # 3. Memória diária.
+        memory = getattr(self, "memory", None)
+        if memory is not None:
+            try:
+                memory.add_daily_message("user", text)
+                memory.add_daily_message("assistant", response)
+            except Exception:
+                pass
+
+        # 4. Contexto do último comando local: permite que "aumenta mais" ou
+        # "diminui de novo" seja resolvido LOCALMENTE (custo zero), reaproveitando
+        # o domínio (brilho/volume) da última ação.
+        lowered = response.lower()
+        if "brilho" in lowered:
+            domain = "brightness"
+        elif "volume" in lowered:
+            domain = "volume"
+        else:
+            domain = None
+        if domain:
+            direction = "up" if any(w in lowered for w in ("subindo", "aumentando", "mais")) else "down"
+            self.last_local_command = {"domain": domain, "direction": direction}
+
+    def ask_pending_question(self, kind, handler):
+        """Registra uma pergunta de sim/não feita pela VEGA.
+
+        ``handler`` é chamado com a resposta classificada (True/False) quando o
+        usuário responder. É o que faz o cérebro lembrar das PRÓPRIAS perguntas:
+        a resposta funciona por voz, texto ou qualquer timing.
+        """
+        self._pending_question = {"kind": kind, "handler": handler}
+
+    def has_pending_question(self) -> bool:
+        return getattr(self, "_pending_question", None) is not None
+
+    def _answer_pending_question(self, text):
+        """Classifica a fala como resposta à pergunta pendente; executa se for.
+
+        Devolve a resposta da VEGA (str) quando o turno foi consumido, ou None
+        quando a fala não é um sim/não — nesse caso a pergunta é descartada e o
+        fluxo normal segue com o pedido do usuário.
+        """
+        pending = getattr(self, "_pending_question", None)
+        if not pending:
+            return None
+
+        from core.brain.confirmation import classify_confirmation
+        # accept_imperative=True: a VEGA ACABOU de perguntar algo, então um
+        # imperativo ("abre aí") é a intenção de aceitar — não um comando
+        # solto. Fora de pergunta pendente, "abre aí" continua sendo comando
+        # normal (aí sem alvo a VEGA pergunta "abrir o quê?", corretamente).
+        answer = classify_confirmation(text, accept_imperative=True)
+        # Fala que não é resposta de sim/não: pergunta perde a validade e o
+        # pedido do usuário segue normalmente.
+        self._pending_question = None
+        if answer is None:
+            return None
+
+        try:
+            return pending["handler"](answer)
+        except Exception as error:
+            print(f"[VEGA Pergunta] Falha ao responder: {error}")
+            return None
+
+    def _resolve_local_continuation(self, text):
+        """Resolve "aumenta mais" / "diminui de novo" localmente (custo zero).
+
+        Usa o domínio (brilho/volume) e a direção do último comando local para
+        repetir a ação quando a fala é uma continuação vaga. Devolve None se a
+        fala não for uma continuação — nesse caso o fluxo normal prossegue.
+        """
+        if not isinstance(text, str):
+            return None
+        last = getattr(self, "last_local_command", None)
+        if not last:
+            return None
+
+        lowered = text.lower().strip()
+        if not lowered:
+            return None
+
+        # Só fala curta de continuação. Um pedido completo ("aumenta o volume
+        # da tv") é resolvido pelo parser normal, não aqui.
+        if len(lowered.split()) > 4:
+            return None
+
+        domain = last.get("domain")
+        lowered_words = lowered
+
+        # 1. Verbo explícito vence: "aumenta mais" sobe, "abaixa mais" desce.
+        if any(w in lowered_words for w in ("diminui", "abaixa", "desce", "menos brilho", "menos volume")):
+            wants_up = False
+        elif any(w in lowered_words for w in ("aumenta", "sobe", "subir", "sobe mais")):
+            wants_up = True
+        elif "menos" in lowered_words:
+            # "menos" sem verbo = diminuir.
+            wants_up = False
+        elif "mais" in lowered_words or lowered_words in {"de novo", "mais um pouco"}:
+            # "mais" sem verbo herda a direção da última ação: depois de
+            # "abaixa o volume", "mais um pouco" continua ABAIXANDO. Antes,
+            # "mais" sempre virava "aumentar", invertendo a ação do usuário.
+            wants_up = last.get("direction") != "down"
+        else:
+            return None
+
+        action = {
+            ("brightness", True): "brightness_up",
+            ("brightness", False): "brightness_down",
+            ("volume", True): "volume_up",
+            ("volume", False): "volume_down",
+        }.get((domain, wants_up), None)
+        if action is None:
+            return None
+
+        try:
+            result = getattr(self.commands, action)()
+        except Exception as error:
+            print(f"[VEGA Continuação] Falha: {error}")
+            return None
+
+        if not isinstance(result, str) or not result.strip():
+            return None
+        return result
+
+    def _store_tool_receipt(self, tool_name, result, user_question=""):
+        """Guarda o dado concreto obtido por uma ferramenta.
+
+        É o que impede o buraco do "e por que isso?": a resposta da ferramenta
+        fica no histórico como fala da VEGA, e o prompt proíbe o modelo de tratar
+        fala da VEGA como fato. O recibo é dado de API com origem explícita, então
+        entra no contexto sem esse conflito.
+        """
+        try:
+            receipt = build_receipt(tool_name, result, user_question=user_question)
+        except Exception as error:
+            print(f"[VegaTools] Não foi possível registrar o recibo: {error}")
+            return None
+        if receipt is not None:
+            self.last_tool_receipt = receipt
+            # Dá ao orquestrador um antecedente concreto para "e por que isso?".
+            orchestrator = getattr(self, "orchestrator", None)
+            note = getattr(orchestrator, "note_tool_receipt", None)
+            if callable(note):
+                try:
+                    note(receipt.summary, receipt.topic)
+                except Exception:
+                    pass
+        return receipt
+
+    def _tool_receipt_context(self):
+        """Bloco de sistema com o último dado verificado (vazio se esfriou)."""
+        receipt = getattr(self, "last_tool_receipt", None)
+        if receipt is None:
+            return ""
+        try:
+            return receipt.to_context_block()
+        except Exception:
+            return ""
 
     def _execute_registered_tool_call(self, name, arguments):
         """Execute only a registered tool with the model-provided arguments."""
@@ -1268,7 +1630,19 @@ class VegaBrain:
             return {"error": "Os argumentos da ferramenta devem ser um objeto."}
 
         try:
-            result = spec.implementation(**arguments)
+            # O desenho ao vivo precisa de um canal próprio: além do resultado
+            # textual, a janela do canvas deve abrir e animar. O callback é
+            # injetado pela interface (vega.py) e é thread-safe via slot.
+            if spec.name == "draw_image" and not callable(getattr(self, "canvas_callback", None)):
+                return {"error": "Canvas de desenho indisponível nesta sessão."}
+            if spec.name == "draw_image":
+                result = spec.implementation(
+                    arguments.get("title", ""),
+                    arguments.get("shapes"),
+                    canvas_callback=self.canvas_callback,
+                )
+            else:
+                result = spec.implementation(**arguments)
             if spec.name == "report":
                 self.memory.add_report_event(result)
             if callable(self.tool_result_callback):
@@ -1487,20 +1861,33 @@ class VegaBrain:
         return f"Sessão de foco iniciada por {duration} minutos: {goal}.\n{plan}"
 
     def _is_phone_control_request(self, text):
-        """Detecta comandos que CONTROLAM o celular (exigem autenticação).
-
-        Print do celular é leitura da tela, mas ainda expõe o aparelho —
-        também exige autorização. Já 'quais dispositivos' é só consulta.
-        """
+        """Detecta comandos que controlam o celular e exigem autenticação."""
         if not text:
             return False
-        if not any(word in text for word in ("celular", "telefone", "smartphone", "android")):
-            return False
-
         # Consultas que não operam o aparelho.
         if any(phrase in text for phrase in (
             "quais dispositivos", "meus dispositivos", "dispositivos conectados",
         )):
+            return False
+
+        # Ações de baixo risco no celular: não exigem autenticação.
+        parser = getattr(self, "commands_parser", None)
+        if parser is not None:
+            try:
+                if parser._extract_phone_search_query(text):
+                    return False
+                music_query, _platform = parser._extract_phone_music_request(text)
+                if music_query:
+                    return False
+            except Exception:
+                pass
+
+        # Ligações, mensagens e leitura de conversa são ações de celular
+        # mesmo quando o usuário não diz "celular" ("responde o miguel").
+        if self._looks_like_phone_action(text):
+            return True
+
+        if not any(word in text for word in ("celular", "telefone", "smartphone", "android")):
             return False
 
         control_markers = (
@@ -1510,6 +1897,20 @@ class VegaBrain:
             "bateria", "liga", "desliga", "fecha", "instala",
         )
         return any(marker in text for marker in control_markers)
+
+    def _looks_like_phone_action(self, text):
+        """Fala que opera o celular sem citar o aparelho.
+
+        "liga para a rita pelo meu celular", "responde o miguel" e
+        "le as mensagens do miguel" são ações do celular.
+        """
+        try:
+            parser = getattr(self, "commands_parser", None)
+            if parser is not None and hasattr(parser, "_looks_like_phone_action"):
+                return bool(parser._looks_like_phone_action(text))
+        except Exception:
+            pass
+        return False
 
     def _check_phone_access(self, text):
         """Verifica a autorização do controle do celular.
@@ -1536,21 +1937,135 @@ class VegaBrain:
         if guard.is_granted(serial):
             return None
 
-        guard.set_pending(text, device_serial=serial)
+        # AUDITORIA NO MOMENTO DO PEDIDO (celular): tira a foto e registra o
+        # pedido ANTES de qualquer senha. É o que faz o log mostrar quem
+        # pediu, mesmo quando o PIN é errado e nada é executado.
+        evidence_path = self._register_security_request(text, source="celular")
+
+        guard.set_pending(
+            text,
+            device_serial=serial,
+            evidence_path=evidence_path,
+            face_supported=bool(evidence_path),
+        )
         return guard.challenge_message()
 
+    def _phone_security_gate(self, text):
+        """PORTÃO ÚNICO: decide se a fala precisa de segurança e aplica.
+
+        Fluxo (o mesmo para QUALQUER tarefa, por voz ou por comando):
+
+        1. a fala pede o celular? (comando direto OU fala natural)
+        2. se pede, o acesso já está liberado nesta sessão?
+           - sim  -> devolve None e a tarefa executa normalmente;
+           - não  -> registra o pedido (com foto) e pede o PIN;
+        3. a fala é o PIN do desafio pendente? Conclui a autorização.
+
+        Devolve uma resposta para falar (quando parou no portão) ou None
+        (quando a tarefa pode seguir).
+        """
+        # 1. A fala é sobre o celular? Comando direto ou fala natural.
+        if not (self._is_phone_control_request(text) or self._looks_like_phone_action(text)):
+            # Não é perigosa: mas ainda pode ser o PIN de um desafio aberto.
+            return self._complete_phone_authentication(text)
+
+        # 2. Já liberado nesta sessão? Então a tarefa segue sem obstáculo.
+        guard_response = self._check_phone_access(text)
+        if guard_response is not None:
+            return guard_response
+
+        # 3. Liberado agora: pode ser o PIN de um desafio pendente.
+        return self._complete_phone_authentication(text)
+
+    def _register_security_request(self, action, source="voz"):
+        """Registra o pedido sensível + foto, sem deixar falha quebrar a fala.
+
+        É o registro de auditoria no MOMENTO do pedido: responde "quem pediu
+        isso?" mesmo que a pessoa erre o PIN e a ação nunca execute.
+        """
+        security = getattr(self, "security", None)
+        if security is None:
+            return None
+        try:
+            return security.register_security_request(action, source=source)
+        except Exception as error:
+            print(f"[VEGA Auditoria] Não foi possível registrar o pedido: {error}")
+            return None
+
+    def _complete_phone_authentication(self, text):
+        """Conclui a autorização do celular quando o PIN foi informado.
+
+        Vale tanto para o caminho de comandos quanto para a fala natural
+        ("responde o miguel" seguido do PIN). Devolve None quando não havia
+        autorização pendente ou quando o texto não traz um PIN.
+        """
+        guard = getattr(self, "phone_guard", None)
+        if guard is None or not guard.has_pending():
+            return None
+
+        pin_match = self._extract_security_pin(text)
+        if not pin_match:
+            return None
+
+        pending = guard.take_pending() or {}
+        action = pending.get("action", text)
+
+        # A tentativa (certa ou errada) vai para o log de auditoria — antes,
+        # o celular não gerava registro nenhum, nem com PIN errado.
+        evidence = pending.get("evidence_path")
+        face_supported = bool(pending.get("face_supported"))
+
+        granted, message = guard.authenticate(pin_match.group(1))
+
+        try:
+            self.security.register_auth_attempt(
+                action,
+                pin_valid=bool(granted),
+                face_valid=None,
+                face_supported=face_supported,
+                evidence_path=evidence,
+                authorized=bool(granted),
+                source="celular",
+            )
+        except Exception as error:
+            print(f"[VEGA Auditoria] Falha ao registrar tentativa: {error}")
+
+        if not granted:
+            # Mantém a ação pendente para o usuário tentar de novo.
+            guard.set_pending(action, device_serial=pending.get("device_serial", ""))
+            return message
+
+        guard.grant(pending.get("device_serial", ""))
+
+        # Já autorizado: executa a ação que estava aguardando em vez de pedir
+        # para o usuário repetir o comando. Antes, a VEGA dizia "Pode repetir
+        # o comando do celular" e parecia que nada tinha acontecido.
+        action = str(action or "").strip()
+        if action and action.lower() != text.lower():
+            try:
+                action_response = self.commands_parser.parse(action)
+            except Exception:
+                action_response = None
+            if action_response:
+                return f"{message} {action_response}"
+
+        return f"{message} Pode repetir o comando do celular."
+
     def _current_phone_serial(self):
-        """Serial do celular conectado (para detectar troca de aparelho)."""
+        """Serial do celular conectado (para detectar troca de aparelho).
+
+        FONTE ÚNICA: usa exatamente o mesmo serial que as ações usam
+        (`PhoneConnector._resolve_serial`, lido do `adb devices`).
+
+        Antes, este método caía no `WirelessADB`, que devolve o endereço
+        sem-fio ("adb-XXXX._adb-tls-connect._tcp"), enquanto as ações usavam
+        o serial do `adb devices`. Dois valores diferentes para o MESMO
+        aparelho faziam o guard achar que o celular tinha trocado e revogar
+        a autorização — a VEGA pedia o PIN em loop, mesmo com a senha certa.
+        """
         try:
             from core.connectivity import PhoneConnector
-            connector = PhoneConnector()
-            devices = connector.connected_devices() if hasattr(connector, "connected_devices") else []
-            if devices:
-                return devices[0]
-            from core.connectivity.wireless import WirelessADB
-            wireless = WirelessADB()
-            found = wireless.connected_devices()
-            return found[0] if found else ""
+            return PhoneConnector()._resolve_serial() or ""
         except Exception:
             return ""
 
@@ -1708,6 +2223,28 @@ class VegaBrain:
             params["slides"] = [text]
             return params
 
+        # ==========================================================
+        # FASE 3 — FERRAMENTAS DE CONTEÚDO NATIVO
+        # ==========================================================
+        # IMPORTANTE: estas ferramentas recebem estruturas (listas de slides,
+        # linhas de planilha, formas de desenho) que NÃO podem ser adivinhadas
+        # por regex a partir da fala. Aqui devolvemos o pedido do usuário como
+        # "content" e deixamos o MODELO montar a estrutura via chamada de
+        # ferramenta (tool call). Antes, o bloco antigo de create_document
+        # injetava parâmetros errados e a ferramenta falhava com
+        # "unexpected keyword argument" / "missing required arguments".
+        if tool.name in {
+            "create_presentation_pptx",
+            "create_document_docx",
+            "create_spreadsheet_xlsx",
+            "create_mindmap_image",
+            "draw_image",
+        }:
+            # Só o pedido textual. Sem title/rows/shapes inventados: se a
+            # chamada estruturada não os trouxer, a própria ferramenta devolve
+            # um erro claro em vez de receber lixo.
+            return {"request": text}
+
         if tool.name == "report":
             return {"title": "Relatório VEGA", "sections": {"solicitação": text}}
 
@@ -1864,9 +2401,51 @@ class VegaBrain:
 
         return random.choice(variations).strip()
 
+    _CREATED_FILE_LABELS = {
+        "create_presentation_pptx": "apresentação",
+        "create_document_docx": "documento",
+        "create_spreadsheet_xlsx": "planilha",
+        "create_mindmap_image": "mapa mental",
+        "draw_image": "desenho",
+        "edit_video": "vídeo",
+    }
+
+    def _announce_created_file(self, tool_name, result):
+        """Abre o arquivo gerado no app padrão e devolve uma fala curta.
+
+        O usuário pediu para VER o resultado. Devolver só o caminho em texto
+        (ou mostrar num painel pequeno) fazia o trabalho parecer incompleto.
+        """
+        import os
+
+        path = str(result.get("path") or "")
+        label = self._CREATED_FILE_LABELS.get(tool_name, "arquivo")
+        name = os.path.basename(path) if path else ""
+
+        if not path or not os.path.exists(path):
+            return f"Criei a {label}, mas não consegui localizar o arquivo para abrir."
+
+        opened = False
+        try:
+            os.startfile(path)  # noqa: S606 — abre no app padrão do Windows
+            opened = True
+        except Exception as error:
+            print(f"[VEGA] Não consegui abrir o arquivo gerado: {error}")
+
+        if opened:
+            return f"Pronto. Criei a {label} ({name}) e já abri para você."
+        return f"Criei a {label}: {name}. Ela está na sua pasta de usuário."
+
     def _format_tool_result(self, tool, result):
         if not isinstance(result, dict):
             return str(result)
+
+        # Arquivos gerados (Fase 3): em vez de despejar caminhos na conversa,
+        # abre o arquivo no aplicativo padrão do Windows para o usuário VER o
+        # resultado. Antes, o mapa mental só aparecia no painelzinho da
+        # interface, pequeno demais para ser lido.
+        if result.get("path") and result.get("status") in {"created", "drawing", "validated"}:
+            return self._announce_created_file(tool.name, result)
 
         if tool.name == "weather":
             return self._format_weather_result(result)
@@ -1943,11 +2522,18 @@ class VegaBrain:
             if sensitive:
                 confirmed = self._has_security_confirmation(normalized)
                 pin_match = self._extract_security_pin(normalized)
-                if not confirmed:
+                if not confirmed and not pin_match:
                     self._pending_dangerous_action = normalized
+                    # AUDITORIA NO MOMENTO DO PEDIDO: a foto é tirada e o
+                    # registro é gravado agora, antes de qualquer senha.
+                    # Antes, quem errava o PIN não deixava rastro nenhum.
+                    self._register_security_request(normalized)
                     return "Confirme a ação perigosa e informe o PIN para continuar."
                 if not pin_match:
                     self._pending_dangerous_action = normalized
+                    # Auditoria da tentativa SEM o PIN: antes, essa tentativa
+                    # confirmada mas sem senha não deixava registro nenhum.
+                    self._register_security_request(normalized)
                     return "Essa ação exige confirmação e PIN antes da execução."
                 authorized = self._authorize_pending_action(normalized, pin_match.group(1))
                 if authorized is not None:
@@ -1956,30 +2542,31 @@ class VegaBrain:
             # ==================================================
             # SEGURANÇA DO CONTROLE DO CELULAR
             # ==================================================
-            # Comandos que operam o celular exigem autenticação (PIN +
-            # rosto) uma vez por sessão. Exceção: o print do celular, que
-            # é somente leitura da tela.
-            if self._is_phone_control_request(normalized):
-                guard_response = self._check_phone_access(normalized)
-                if guard_response is not None:
-                    return guard_response
-            # Se há uma autenticação de celular pendente e o usuário
-            # acabou de dizer o PIN, conclui a autorização.
-            guard = getattr(self, "phone_guard", None)
-            if guard is not None and guard.has_pending():
-                pin_match = self._extract_security_pin(normalized)
-                if pin_match:
-                    granted, message = self.phone_guard.authenticate(pin_match.group(1))
-                    if not granted:
-                        self.phone_guard.set_pending(
-                            self.phone_guard.take_pending() or {}
-                        )
-                        return message
-                    pending = self.phone_guard.take_pending() or {}
-                    self.phone_guard.grant(pending.get("device_serial", ""))
-                    return f"{message} Pode repetir o comando do celular."
+            # PORTÃO ÚNICO DE SEGURANÇA DO CELULAR
+            # ==================================================
+            # Uma única passagem decide se a fala é perigosa. Se for, aplica
+            # a segurança (registro + foto + PIN) e, aprovada, a tarefa
+            # segue normalmente logo abaixo — sem o resto do código precisar
+            # saber que existe segurança.
+            #
+            # Antes havia dois blocos quase iguais aqui (um para comandos de
+            # celular, outro para fala natural), com condições que se
+            # anulavam. Era isso que tornava o comportamento inconsistente.
+            gate_response = self._phone_security_gate(normalized)
+            if gate_response is not None:
+                return gate_response
 
             response = self.commands_parser.parse(normalized)
+            if response is None:
+                # FALLBACK SEMÂNTICO: o parser local não reconheceu, mas a fala
+                # pode ser um pedido de ação válido nunca previsto ("deixa o pc
+                # mais claro"). Só aqui a IA é consultada — e apenas quando a
+                # fala parece um comando (gate de custo); conversa pura nunca
+                # passa por aqui. A ação volta pelo MESMO executor, com toda a
+                # segurança já existente.
+                routed = self._route_via_semantic_router(normalized)
+                if routed is not None:
+                    return routed
             self._remember_opened_app_from_command(normalized, response)
             # Contexto de tarefa: app aberto por comando vira a tarefa atual.
             if getattr(self, "_last_opened_app", None):
@@ -2007,6 +2594,92 @@ class VegaBrain:
             )
 
             return None
+
+    # ==========================================================
+    # FALLBACK SEMÂNTICO (IA roteia, código valida e executa)
+    # ==========================================================
+
+    def _semantic_router(self):
+        """Cria o roteador sob demanda (lazy), com o catálogo de capacidades.
+
+        O inventário vem do `CapabilityCatalog`, que agrega as regras locais E
+        as ferramentas registradas. Antes, só as regras eram enviadas e ainda
+        por um corte cego nas primeiras 45 — a IA ficava sem ver metade do que
+        a VEGA sabe fazer.
+        """
+        router = getattr(self, "_semantic_router_instance", None)
+        if router is None:
+            try:
+                from core.brain.semantic_router import SemanticRouter
+                from core.capabilities import CapabilityCatalog
+                catalog = CapabilityCatalog.build(
+                    commands_parser=getattr(self, "commands_parser", None),
+                    tool_manager=getattr(self, "tool_manager", None),
+                )
+                router = SemanticRouter(self.ai, catalog)
+                self._semantic_router_instance = router
+            except Exception as error:
+                print(f"[VEGA Router] Indisponível: {error}")
+                return None
+        return router
+
+    def _route_via_semantic_router(self, text):
+        """Pede à IA a intenção da fala e a executa pelo mesmo executor.
+
+        Devolve None em qualquer falha: o fluxo normal (conversa com a IA)
+        segue exatamente como antes. Ação só acontece quando a intenção
+        devolvida existe de fato no catálogo do parser.
+        """
+        try:
+            router = self._semantic_router()
+        except Exception as error:
+            print(f"[VEGA Router] Indisponível no turno: {error}")
+            return None
+        if router is None:
+            return None
+        routed = router.route(text)
+        if routed is None:
+            return None
+
+        intent = routed["intent"]
+        params = routed["params"] or {}
+
+        # A execução é pelo catálogo do parser: mesma segurança, mesmo custo.
+        catalog = getattr(self.commands_parser, "_intent_catalog", None)
+        if catalog is None:
+            return None
+
+        rule = next(
+            (item for item in catalog.sorted_rules() if item.name == intent),
+            None,
+        )
+        if rule is None:
+            return None
+
+        context = self._build_intent_context(text)
+        context.extras["semantic_params"] = params
+        try:
+            result = rule.run(context)
+        except Exception as error:
+            print(f"[VEGA Router] Falha executando '{intent}': {error}")
+            return None
+
+        if result is None:
+            return None
+
+        # A VEGA fala a resposta do modelo ("say") quando ela existir; senão,
+        # mantém o resultado factual do executor.
+        say = routed.get("say") or ""
+        return say if say else result
+
+    def _build_intent_context(self, text):
+        from core.actions.intent_catalog import IntentContext
+        return IntentContext(
+            text=text,
+            original=text,
+            commands=self.commands,
+            parser=self.commands_parser,
+        )
 
     @staticmethod
     def _has_security_confirmation(text):
@@ -2087,6 +2760,14 @@ class VegaBrain:
 
     @staticmethod
     def _extract_security_pin(text):
+        """Extrai o PIN ditado ou digitado, no formato que o VegaSecurity aceita.
+
+        O PIN é sempre numérico (4 a 64 dígitos). Aceitamos:
+
+        - "1234" (digitado direto);
+        - "senha 1234" / "pin: 1234" (com o rótulo na frente);
+        - "um dois tres quatro" (ditado por voz, com ou sem espaços).
+        """
         direct_match = re.search(r"\b(?:pin|senha|código|codigo)?\s*(\d{4,})\b", text)
         if direct_match:
             return direct_match
@@ -2105,6 +2786,11 @@ class VegaBrain:
             "cinquenta": "50", "sessenta": "60", "setenta": "70",
             "oitenta": "80", "noventa": "90",
         }
+        # O reconhecimento de fala costuma escrever "um dois três" como
+        # "umdoistres" ou "um, dois, três". Sem separar as palavras coladas, o
+        # PIN ditado era perdido e a autorização nunca concluía.
+        source = BrainNumberWords.separate_glued_digits(source, number_words)
+
         tokens = re.findall(r"[a-záàãâéêíóõôúç]+|\d", source.lower())
         values = []
         index = 0
@@ -2132,7 +2818,15 @@ class VegaBrain:
                     if unit is not None and 0 < int(unit) < 10:
                         numeric_value += int(unit)
                         index = next_index
-            values.append(str(numeric_value))
+            # Cada palavra ditada vale UM dígito (é assim que se fala um PIN:
+            # "um dois zero" -> 120). "zero" precisa virar "0" e não "";
+            # e valores >= 10 (ex.: "dez") contam como dois dígitos, senão o
+            # comprimento do PIN era inflado e "senha um dois zero" era
+            # recusado por parecer ter só 3 dígitos.
+            if numeric_value == 0:
+                values.append("0")
+            else:
+                values.append(str(numeric_value))
             index += 1
 
         candidate = "".join(values)
@@ -2239,9 +2933,13 @@ class VegaBrain:
             return self._file_changes_disabled_response()
         if isinstance(self._pending_dangerous_action, dict) and self._pending_dangerous_action.get("kind") == "choose_delete_file":
             return self._select_pending_file_folder(text)
-        if not self._has_security_confirmation(text):
-            return "Ação perigosa pendente. Diga que confirma e informe o PIN."
+        # Com uma ação perigosa pendente, o PIN sozinho já é a confirmação:
+        # o usuário foi instruído a "confirmar e informar o PIN", então digitar
+        # só o PIN equivale a confirmar. Antes, um PIN puro era recusado com
+        # "Diga que confirma e informe o PIN" mesmo quando a senha era a certa.
         pin_match = self._extract_security_pin(text)
+        if not self._has_security_confirmation(text) and not pin_match:
+            return "Ação perigosa pendente. Diga que confirma e informe o PIN."
         if not pin_match:
             return "Entendi a confirmação, mas ainda preciso do PIN."
 

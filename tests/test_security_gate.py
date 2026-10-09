@@ -49,14 +49,24 @@ def test_pin_rotation_requires_current_pin(tmp_path):
     assert security.verify("5678")
 
 
-def test_verify_locks_after_max_attempts(tmp_path):
-    import time as _time
+def test_verify_locks_after_max_attempts(tmp_path, monkeypatch):
+    """Lockout com relógio controlado (determinístico, sem sleep real).
+
+    Antes usava LOCKOUT_SECONDS=0.05 + sleep(0.06): margem de 10 ms. Em uma
+    execução lenta (suíte completa rodando antes), o lockout expirava antes do
+    sleep terminar e o PIN correto era ACEITO quando o teste esperava falha.
+    """
+    import core.security.security as security_module
+
+    fake_time = [1000.0]
+    monkeypatch.setattr(security_module.time, "time", lambda: fake_time[0])
+
     security = VegaSecurity(path=str(tmp_path / "security.json"))
     security.set_pin("1234")
 
     original = VegaSecurity.LOCKOUT_SECONDS
     try:
-        VegaSecurity.LOCKOUT_SECONDS = 0.05
+        VegaSecurity.LOCKOUT_SECONDS = 30.0
         for _ in range(VegaSecurity.MAX_ATTEMPTS):
             assert not security.verify("9999")
 
@@ -69,7 +79,8 @@ def test_verify_locks_after_max_attempts(tmp_path):
         except PermissionError:
             pass
 
-        _time.sleep(0.06)
+        # Avança o relógio falso além do lockout (sem dormir de verdade).
+        fake_time[0] += 31.0
         assert security.verify("1234")
     finally:
         VegaSecurity.LOCKOUT_SECONDS = original

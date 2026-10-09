@@ -1,0 +1,6 @@
+
+        [
+          {"text": "Entrega de trabalho", "due_at": "2026-10-02T18:00:00+00:00", "kind": "reminder", "active": true},
+          {"text": "Revisão de física", "due_at": "2026-10-02T20:00:00+00:00", "kind": "focus", "active": true}
+        ]
+        

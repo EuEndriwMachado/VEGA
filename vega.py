@@ -416,6 +416,20 @@ def stop_background_music():
 
 
 def classify_news_confirmation(text):
+    """Classifica a resposta à oferta de ler as notícias.
+
+    ANTES só reconhecia a confirmação quando ela era a PRIMEIRA palavra da
+    fala. "oi vega, quero sim" não casava com nenhuma frase positiva (começa
+    com "oi") e a resposta caía no fluxo normal — a VEGA ignorava o "sim" e
+    respondia "o que a gente vai resolver agora?".
+
+    Agora a confirmação é procurada em qualquer posição da fala, avaliando
+    primeiro a parte final (onde a resposta real costuma estar) e respeitando
+    negação explícita.
+
+    Devolve True (confirmou), False (recusou) ou None (não é uma resposta a
+    esta pergunta — o turno segue para o fluxo normal).
+    """
     normalized = "".join(
         character
         for character in unicodedata.normalize("NFD", str(text or "").lower())
@@ -423,23 +437,70 @@ def classify_news_confirmation(text):
     )
     normalized = re.sub(r"[^\w\s]", " ", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
+    if not normalized:
+        return None
 
+    # Vocativos e muletas de fala que podem vir antes da resposta de verdade.
+    normalized = re.sub(
+        r"^(?:oi|ola|opa|ei|hey|vega|por favor|pfv|bom|bem|entao|ah|hmm)+\s+",
+        "",
+        normalized,
+    ).strip()
+    if not normalized:
+        return None
+
+    # Negação explícita tem prioridade sobre qualquer termo positivo.
     negative_phrases = (
-        "nao", "nao quero", "agora nao", "nao agora", "depois", "mais tarde",
+        "nao quero", "nao quero saber", "agora nao", "nao agora",
+        "nao precisa", "nao obrigado", "deixa pra la", "deixa quieto",
+        "mais tarde", "depois", "nao", "deixa", "esquece",
     )
-    if any(normalized == phrase or normalized.startswith(phrase + " ") for phrase in negative_phrases):
+    positive_phrases = (
+        "sim", "quero", "quero saber", "quero sim", "pode falar", "pode ler",
+        "manda ai", "manda ver", "claro", "com certeza", "isso", "isso mesmo",
+        "leia", "le", "pode", "bora", "vai", "ok", "beleza",
+    )
+
+    # Busca por palavra inteira (não por prefixo): "sim" dentro de "simulado"
+    # não deve confirmar nada.
+    def _has(phrase: str) -> bool:
+        return bool(re.search(rf"\b{re.escape(phrase)}\b", normalized))
+
+    # Negação composta ("não quero", "não obrigado") contém um termo positivo
+    # ("quero") como substring. Se o usuário negou com uma dessas formas, a
+    # resposta é NÃO — sem depender de posição.
+    strong_negatives = (
+        "nao quero", "nao quero saber", "nao precisa", "nao obrigado",
+        "nao agora", "agora nao", "deixa pra la", "deixa quieto",
+    )
+    if any(_has(phrase) for phrase in strong_negatives):
         return False
 
-    positive_phrases = (
-        "sim", "quero", "quero saber", "pode falar", "pode ler", "manda ai",
-        "claro", "com certeza", "isso", "leia", "pode",
-    )
-    if any(normalized == phrase or normalized.startswith(phrase + " ") for phrase in positive_phrases):
+    has_negative = any(_has(phrase) for phrase in negative_phrases)
+    has_positive = any(_has(phrase) for phrase in positive_phrases)
+
+    if has_negative and not has_positive:
+        return False
+    if has_positive and not has_negative:
         return True
-    return None
+    if not has_positive and not has_negative:
+        return None
+
+    # Ambos presentes sem negação composta ("sim, mas não agora"): a última
+    # intenção dita vence, porque reflete a decisão final do usuário.
+    last_negative = max(
+        (normalized.rfind(phrase) for phrase in negative_phrases if _has(phrase)),
+        default=-1,
+    )
+    last_positive = max(
+        (normalized.rfind(phrase) for phrase in positive_phrases if _has(phrase)),
+        default=-1,
+    )
+    return last_positive > last_negative
 
 
 def should_run_activation_update(memory=None):
+    """Verdadeiro quando a atualização de notícias ainda não foi enviada hoje."""
     if memory is None:
         memory = VegaMemory()
 
@@ -451,7 +512,20 @@ def should_run_activation_update(memory=None):
     return str(last_update).strip() != today
 
 
-def mark_activation_update_sent(memory=None):
+# A resposta de ativação já termina em "Olá, Endriw." — repetir o prefixo
+# fazia a VEGA dizer o próprio nome duas vezes na mesma fala.
+_ACTIVATION_UPDATE_PREFIXES = ("VEGA: ", "Vega: ", "[VEGA] ", "[Vega] ")
+
+
+def strip_activation_update_prefix(text):
+    value = str(text or "").strip()
+    for prefix in _ACTIVATION_UPDATE_PREFIXES:
+        if value.startswith(prefix):
+            return value[len(prefix):].lstrip()
+    return value
+
+
+def mark_activation_update_sent(memory=None, text=None):
     if memory is None:
         memory = VegaMemory()
 
@@ -739,7 +813,7 @@ def main():
 
         print("[Inicialização] Preparando microfone...", flush=True)
         voice = VegaVoice(
-            microphone_index=1
+            microphone_index=None if text_only_mode else 1
         )
         voice.enabled = not text_only_mode
 
@@ -749,6 +823,9 @@ def main():
         print("[Inicialização] Preparando interface...", flush=True)
         vega_ui = InterfaceVEGA()
         brain.tool_result_callback = vega_ui.tool_result_ready.emit
+        # Canvas de desenho ao vivo (Fase 3): via SINAL, thread-safe como os
+        # demais (o callback roda na thread do cérebro; o slot roda na UI).
+        brain.canvas_callback = vega_ui.canvas_draw_requested.emit
         vega_ui.brain_view_requested.connect(open_database_viewer)
         brain.brain_view_callback = vega_ui.brain_view_requested.emit
         brain.database_view_callback = vega_ui.brain_view_requested.emit
@@ -770,8 +847,10 @@ def main():
         # ------------------------------------------------------
 
         print("[Inicialização] Preparando câmera...", flush=True)
+        # Descoberta de câmera é adiada até o usuário solicitar captura; uma
+        # câmera ausente/ocupada não deve impedir a VEGA de iniciar.
         camera = VegaCamera(
-            camera_index=1,
+            camera_index=0,
             width=1366,
             height=768
         )
@@ -822,6 +901,29 @@ def main():
     clap_detector = None
 
     camera_active = False
+
+    # Câmera inicial: a WEBCAM DO PC, escolhida pelo NOME do dispositivo.
+    #
+    # O índice não é confiável — o Windows define a ordem conforme quem
+    # registra primeiro, então a Iriun (celular) pode ficar no 0 e a webcam
+    # física no 1. Por isso o padrão é resolvido por nome, e não por número.
+    try:
+        from config.camera_menu import load_preferred_camera
+
+        preferred_camera = load_preferred_camera()
+        if preferred_camera is not None:
+            camera.switch_camera(preferred_camera)
+            vega_ui.set_camera_index(preferred_camera)
+            print(f"[VEGA Câmera] Usando a câmera {preferred_camera} (escolhida antes).")
+        else:
+            padrao = camera.select_camera()
+            camera.switch_camera(padrao)
+            vega_ui.set_camera_index(padrao)
+            nomes = camera.camera_names()
+            rotulo = nomes[padrao] if padrao < len(nomes) else f"índice {padrao}"
+            print(f"[VEGA Câmera] Usando a câmera padrão do PC: {rotulo}.")
+    except Exception as error:
+        print(f"[VEGA Câmera] Preferência indisponível, usando a do PC: {error}")
 
     activation_count = 0
 
@@ -1105,18 +1207,36 @@ def main():
         )
 
     def capture_camera_frame():
+        """Captura um frame pronto para análise, esperando a câmera aquecer.
+
+        Duas correções que resolvem a falha na PRIMEIRA tentativa:
+
+        1. Se a câmera estava desligada, ela é ligada e recebe um tempo de
+           aquecimento ANTES de começar a espera pelo frame. Na primeira vez a
+           webcam abre do zero (o driver inicializa o sensor) e isso demora —
+           antes, a espera começava junto com a abertura e estourava.
+
+        2. O limite total é maior e o laço só aceita um frame com conteúdo,
+           não apenas o primeiro que aparecer (que é preto).
+        """
         started_for_request = not camera_active
         if started_for_request:
             start_camera()
+            # Deixa o laço de captura abrir o dispositivo e estabilizar antes
+            # de exigir um frame bom. Sem isso, a primeira pergunta falhava e a
+            # segunda funcionava — exatamente o que o usuário relatou.
+            time.sleep(1.2)
 
         try:
-            deadline = time.monotonic() + 3.0
+            deadline = time.monotonic() + 10.0
             frame = camera.latest_frame
-            while frame is None and time.monotonic() < deadline:
+            while time.monotonic() < deadline:
                 if not camera.is_running:
                     break
-                time.sleep(0.05)
                 frame = camera.latest_frame
+                if frame is not None and not _frame_is_dark(frame):
+                    break
+                time.sleep(0.05)
 
             if frame is None:
                 return None
@@ -1126,7 +1246,38 @@ def main():
             if started_for_request:
                 close_camera()
 
+    def _frame_is_dark(frame):
+        """True quando o frame ainda está praticamente preto (sem conteúdo)."""
+        try:
+            return float(frame.mean()) < 12.0
+        except Exception:
+            return False
+
     brain.camera_frame_callback = capture_camera_frame
+
+    # Tela do PC: a VEGA sai da frente por um instante antes da captura.
+    # O tema dela é quase preto, então capturar com ela em foco produz uma
+    # imagem preta — e o modelo responde honestamente "estou vendo uma tela
+    # escura". Esconder e restaurar resolve isso sem o usuário perceber.
+    def _hide_self_for_screen_capture():
+        try:
+            vega_ui.hide()
+            QApplication.processEvents()
+            time.sleep(0.35)
+        except Exception:
+            pass
+
+    def _restore_self_after_screen_capture():
+        try:
+            QMetaObject.invokeMethod(vega_ui, "show", Qt.QueuedConnection)
+        except Exception:
+            try:
+                vega_ui.show()
+            except Exception:
+                pass
+
+    brain.screen_hide_callback = _hide_self_for_screen_capture
+    brain.screen_restore_callback = _restore_self_after_screen_capture
 
     def alternar_camera_interface(active):
         if active:
@@ -1134,6 +1285,43 @@ def main():
         else:
             close_camera()
         vega_ui.set_camera_state(active)
+
+    def selecionar_camera_interface(index):
+        """Troca a câmera em uso (painel no botão de câmera).
+
+        A troca vale para a captura por turnos E para o modo live: os dois
+        usam o mesmo objeto `camera`. A escolha é lembrada entre execuções —
+        o padrão continua sendo a câmera do PC até você escolher outra.
+
+        A troca NÃO fecha e reabre a câmera: o `switch_camera` já aplica o
+        índice (e descarta o frame da câmera anterior). Fechar/reabrir no meio
+        fazia a captura seguinte pegar o frame velho — origem do "escolhi a
+        câmera 1 e ela usou a do PC".
+        """
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            return
+        try:
+            from config.camera_menu import save_preferred_camera
+
+            camera.switch_camera(index)
+            vega_ui.set_camera_index(index)
+            # Guarda o índice E o nome: se o Windows mudar a ordem dos
+            # dispositivos, o nome permite reencontrar a mesma câmera.
+            nome = ""
+            try:
+                nomes = camera.camera_names()
+                if index < len(nomes):
+                    nome = nomes[index]
+            except Exception:
+                nome = ""
+            save_preferred_camera(index, nome)
+            print(f"[VEGA Câmera] Usando a câmera {index}{' - ' + nome if nome else ''}.")
+        except Exception as error:
+            print(f"[VEGA Câmera] Não consegui trocar para a câmera {index}: {error}")
+
+    vega_ui.camera_selected.connect(selecionar_camera_interface)
 
     def alternar_microfone_interface(active):
         voice.enabled = bool(active)
@@ -1218,24 +1406,63 @@ def main():
     # ==========================================================
 
     def _speak_activation_update():
+        """Saudação de ativação.
+
+        As notícias são oferecidas APENAS na primeira ativação do dia
+        (`should_run_activation_update`), para não virar repetição a cada vez
+        que a VEGA acorda. Nas demais ativações ela só cumprimenta.
+
+        A ferramenta de notícias continua disponível a qualquer momento por
+        pedido direto ("abre as notícias").
+        """
         nonlocal pending_news_items
         if not is_session_active():
             return
 
-        items = fetch_startup_news(limit=3)
+        # Já falou das notícias hoje? Então é só um cumprimento breve.
+        if not should_run_activation_update(brain.memory):
+            try:
+                greeting = "Oi, Endriw. Estou pronta. O que a gente vai fazer agora?"
+                print(f"Vega: {greeting}")
+                emit_vega_status(greeting)
+                set_speaking(True)
+                falar(greeting)
+                speaker.wait_until_done(timeout_seconds=15.0)
+            except Exception:
+                pass
+            finally:
+                atualizar_audio(0.0)
+                set_speaking(False)
+            return
+
+        # PRIMEIRA vez do dia: oferece o resumo, como o usuário pediu.
+        try:
+            items = fetch_startup_news(limit=3)
+        except Exception:
+            items = []
         with news_items_lock:
             pending_news_items = items
 
         try:
-            question = "Oi, Endriw. Aqui é a VEGA. Quer que eu leia o resumo das três principais notícias?"
+            question = "Oi, Endriw. Quer que eu leia o resumo das três principais notícias?"
             print(f"Vega: {question}")
             emit_vega_status(question)
-            # Painel de notícias abre JUNTO com a pergunta: o usuário já vê
-            # as manchetes enquanto decide (não só depois de confirmar).
+            # A interface já prefixa com "VEGA: " — não duplicar o prefixo aqui.
             if items:
                 vega_ui.tool_result_ready.emit("news", {"items": items, "startup": True})
             news_prompt_active.set()
             set_speaking(True)
+            awaiting_news_confirmation.set()
+
+            def _news_answer(confirmed, _items=list(items)):
+                if confirmed:
+                    with news_items_lock:
+                        current = list(pending_news_items) or _items
+                    return build_startup_news_briefing(limit=3, items=current)
+                vega_ui.tool_result_cleared.emit()
+                return "Tudo bem. Não vou ler as notícias agora."
+
+            brain.ask_pending_question("news", _news_answer)
             falar(question)
             speaker.wait_until_done(timeout_seconds=30.0)
         except Exception:
@@ -1243,15 +1470,24 @@ def main():
         finally:
             news_prompt_active.clear()
 
-        awaiting_news_confirmation.set()
-
-        mark_activation_update_sent()
+        # Marca o dia: só depois de oferecer, para não suprimir a oferta se
+        # algo falhar antes de a pergunta ser feita.
+        try:
+            mark_activation_update_sent(brain.memory)
+        except Exception:
+            pass
         atualizar_audio(0.0)
         set_speaking(False)
 
     def encerrar_sessao():
 
         stop_background_music()
+
+        # Modo live ligado? Encerra junto — ele segura microfone e alto-falante.
+        try:
+            brain.stop_live_mode()
+        except Exception:
+            pass
 
         set_session_active(
             False
@@ -1338,6 +1574,78 @@ def main():
     # ==========================================================
     # LOOP DE ESCUTA
     # ==========================================================
+
+    def _handle_news_confirmation(user_input):
+        """Trata a resposta do usuário quando a VEGA ofereceu ler as notícias.
+
+        Devolve True quando o turno foi consumido (não seguir para o fluxo
+        normal).
+
+        Uma fala que NÃO é resposta clara ("abre o chrome", por exemplo) encerra
+        a espera: a VEGA segue com o pedido do usuário em vez de reter o estado
+        e tentar interpretar a próxima fala como se fosse um sim/não.
+        """
+        confirmation = classify_news_confirmation(user_input)
+        if confirmation is None:
+            # A pessoa mudou de assunto: a oferta perde a validade e some o
+            # painel de notícias, mas o comando dela segue normalmente.
+            awaiting_news_confirmation.clear()
+            return False
+
+        awaiting_news_confirmation.clear()
+        if confirmation:
+            with news_items_lock:
+                items = list(pending_news_items)
+            response = build_startup_news_briefing(limit=3, items=items)
+        else:
+            response = "Tudo bem. Não vou ler as notícias agora."
+            vega_ui.tool_result_cleared.emit()
+
+        emit_vega_status(response)
+        set_speaking(True)
+        news_prompt_active.set()
+        try:
+            falar(response)
+            speaker.wait_until_done(timeout_seconds=45.0)
+            # Pós-leitura: a VEGA PERGUNTA se quer saber mais, em vez de um
+            # texto fixo de oferta. A pergunta é registrada no CÉREBRO — quando
+            # o usuário confirmar (pela intenção, não por palavra-chave), ela
+            # ABRE AS NOTÍCIAS que leu, no app padrão. Antes era um if com
+            # texto fixo sobre "vídeos bombando", e um "abre aí" seguinte
+            # morria como "abrir o quê?".
+            if confirmation and not response_cancelled.is_set():
+                followup = "Quer saber mais sobre as notícias?"
+                emit_vega_status(followup)
+
+                def _news_more_answer(wants_more, _items=None):
+                    with news_items_lock:
+                        current = list(pending_news_items)
+                    if not wants_more or not current:
+                        return "Tudo bem, ficamos por aqui."
+                    opened = []
+                    for item in current[:3]:
+                        link = str(item.get("link") or "").strip()
+                        if not link:
+                            continue
+                        try:
+                            os.startfile(link)
+                            opened.append(link)
+                        except Exception as error:
+                            print(f"[VEGA Notícias] Falha ao abrir {link}: {error}")
+                    if not opened:
+                        return "Não consegui abrir as notícias agora."
+                    return f"Abri {len(opened)} notícia(s) para você."
+
+                brain.ask_pending_question("news_more", _news_more_answer)
+                falar(followup)
+                speaker.wait_until_done(timeout_seconds=20.0)
+        except Exception:
+            pass
+        finally:
+            news_prompt_active.clear()
+        atualizar_audio(0.0)
+        set_speaking(False)
+        return True
 
     def loop_escuta():
 
@@ -1431,38 +1739,10 @@ def main():
                 time.sleep(0.2)
                 continue
 
-            if awaiting_news_confirmation.is_set():
-                confirmation = classify_news_confirmation(user_input)
-                if confirmation is not None:
-                    awaiting_news_confirmation.clear()
-                    if confirmation:
-                        with news_items_lock:
-                            items = list(pending_news_items)
-                        response = build_startup_news_briefing(limit=3, items=items)
-                    else:
-                        response = "Tudo bem. Não vou ler as notícias agora."
-                        vega_ui.tool_result_cleared.emit()
-
-                    emit_vega_status(response)
-                    set_speaking(True)
-                    news_prompt_active.set()
-                    try:
-                        falar(response)
-                        speaker.wait_until_done(timeout_seconds=45.0)
-                        # Pós-leitura: sugestão proativa de vídeos em alta
-                        # conectados ao momento (continuidade da conversa).
-                        if confirmation and not response_cancelled.is_set():
-                            followup = "Se quiser, me pede que eu abro os vídeos que estão bombando hoje."
-                            emit_vega_status(followup)
-                            falar(followup)
-                            speaker.wait_until_done(timeout_seconds=20.0)
-                    except Exception:
-                        pass
-                    finally:
-                        news_prompt_active.clear()
-                    atualizar_audio(0.0)
-                    set_speaking(False)
-                    continue
+            if awaiting_news_confirmation.is_set() and _handle_news_confirmation(
+                user_input
+            ):
+                continue
 
             response_cancelled.clear()
 
@@ -1490,6 +1770,18 @@ def main():
                     r"\b\w+\b",
                     user_plain
                 )
+            )
+
+            # Modo live: pedido explícito de conversa em tempo real. A fala
+            # precisa citar "tempo real"/"ao vivo" junto de um verbo, para não
+            # capturar conversa normal que só menciona a palavra "live".
+            live_requested = (
+                bool(command_words & {"ativar", "ativa", "ligar", "liga", "entrar", "abrir", "abre", "modo"})
+                and bool(command_words & {"live", "realtime", "tempo", "real", "vivo", "aovivo"})
+            )
+            live_stop_requested = (
+                bool(command_words & {"desativar", "desativa", "desligar", "desliga", "sair", "encerrar", "parar", "para", "fechar", "fecha"})
+                and bool(command_words & {"live", "realtime", "tempo", "real", "vivo", "aovivo"})
             )
 
             camera_start_requested = (
@@ -1597,6 +1889,52 @@ def main():
 
                 encerrar_sessao()
 
+                continue
+
+            # ==================================================
+            # MODO LIVE (conversa em tempo real)
+            # ==================================================
+            # Tratado ANTES dos comandos visuais: é um regime de conversa, não
+            # uma ação de sistema, e precisa falar imediatamente.
+
+            if live_requested or live_stop_requested:
+                if live_stop_requested:
+                    try:
+                        brain.stop_live_mode()
+                    except Exception:
+                        pass
+                    resposta_live = "Modo em tempo real encerrado."
+                else:
+                    def _live_text(texto):
+                        if texto and str(texto).strip():
+                            print(f"Vega (live): {str(texto).strip()}")
+
+                    started = False
+                    try:
+                        started = brain.start_live_mode(
+                            video_mode="camera" if camera_active else None,
+                            on_text=_live_text,
+                            on_status=lambda msg: print(f"[VEGA Live] {msg}"),
+                        )
+                    except Exception as error:
+                        print(f"[VEGA Live] Falha ao iniciar: {error}")
+                    resposta_live = (
+                        "Modo em tempo real ativo. Pode falar comigo normalmente."
+                        if started
+                        else "Não consegui iniciar o modo em tempo real agora."
+                    )
+
+                print(f"Vega: {resposta_live}")
+                emit_vega_status(resposta_live)
+                set_speaking(True)
+                falar(resposta_live)
+                try:
+                    if speaker.is_speaking:
+                        speaker.wait_until_done()
+                except Exception:
+                    pass
+                atualizar_audio(0.0)
+                set_speaking(False)
                 continue
 
             # ==================================================
@@ -1798,6 +2136,21 @@ def main():
             spoke_sentences = False
 
             response_cancelled.clear()
+
+            # Fala anterior terminou (ou foi interrompida): sai de SPEAKING
+            # antes de iniciar o turno novo. Sem isso, o próximo set_speaking
+            # tentaria SPEAKING -> SPEAKING e a conversa ficava presa.
+            try:
+                if conv_state.state in {
+                    ConversationState.SPEAKING,
+                    ConversationState.INTERRUPTED,
+                    ConversationState.EXECUTING,
+                    ConversationState.THINKING,
+                }:
+                    conv_state.transition(ConversationState.LISTENING)
+            except Exception:
+                pass
+
             set_speaking(
                 True
             )

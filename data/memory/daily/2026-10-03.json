@@ -1,0 +1,942 @@
+[
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:17:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-03T23:17:59"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:18:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-03T23:18:49"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:18:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-03T23:18:50"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:18:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá falando.",
+        "timestamp": "2026-10-03T23:18:51"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:18:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê? Decidir as coisas em cima do muro não é muito a sua cara, Endriw. Manda a letra.",
+        "timestamp": "2026-10-03T23:18:52"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:18:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-03T23:18:53"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:18:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Tô por aqui se precisar de algo.",
+        "timestamp": "2026-10-03T23:18:54"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:19:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. O que manda?",
+        "timestamp": "2026-10-03T23:19:04"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:19:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-03T23:19:05"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:19:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá falando.",
+        "timestamp": "2026-10-03T23:19:07"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:19:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me dá um rumo melhor.",
+        "timestamp": "2026-10-03T23:19:08"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:19:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-03T23:19:09"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:19:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda?",
+        "timestamp": "2026-10-03T23:19:10"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:20:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:20:16"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:30:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom, então seguimos em frente. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:30:20"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:30:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:30:22"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:30:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Solta o verbo, Endriw.",
+        "timestamp": "2026-10-03T23:30:23"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:30:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me dá uma pista do que está passando por essa cabeça.",
+        "timestamp": "2026-10-03T23:30:24"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:30:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-03T23:30:25"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:30:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-03T23:30:26"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:32:40"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:32:41"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:32:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-03T23:32:42"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:32:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, do que você precisa agora?",
+        "timestamp": "2026-10-03T23:32:43"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:32:43"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Decide aí: quer mandar em alguma coisa ou só testando o meu reflexo?",
+        "timestamp": "2026-10-03T23:32:44"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:32:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Fechado. Se mudar de ideia ou quiser voltar para o MySQL ou BDD, é só chamar.",
+        "timestamp": "2026-10-03T23:32:47"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:32:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:32:48"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:37:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-03T23:37:35"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:37:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-03T23:37:38"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:37:38"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga lá, Endriw. O que vamos resolver agora?",
+        "timestamp": "2026-10-03T23:37:39"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:37:39"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vamos fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-03T23:37:44"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:37:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-03T23:37:48"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:37:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Do que você precisa?",
+        "timestamp": "2026-10-03T23:37:51"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:39:18"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-03T23:39:20"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:49:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-03T23:49:12"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:49:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-03T23:49:13"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:49:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Manda a boa, Endriw.",
+        "timestamp": "2026-10-03T23:49:15"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:49:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora foi? Fala logo o que tá rondando essa cabeça.",
+        "timestamp": "2026-10-03T23:49:16"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:49:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-03T23:49:17"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:49:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:49:18"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:50:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-03T23:50:33"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:50:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-03T23:50:35"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:50:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim para quê, Endriw? Me dá a letra logo.",
+        "timestamp": "2026-10-03T23:50:37"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:50:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez não seja resposta, Endriw. Manda o papo reto: o que você tá querendo fazer?",
+        "timestamp": "2026-10-03T23:50:38"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:50:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-03T23:50:41"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:50:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-03T23:50:41"
+    },
+    {
+        "role": "user",
+        "content": "não qero",
+        "timestamp": "2026-10-03T23:51:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, sem pressão. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:51:28"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:51:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. O que manda?",
+        "timestamp": "2026-10-03T23:51:55"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:51:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-03T23:51:57"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:51:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o que, Endriw? Terminou me deixando no vácuo aí. Fala logo o que é.",
+        "timestamp": "2026-10-03T23:51:58"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:51:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me fala logo o que está passando pela cabeça.",
+        "timestamp": "2026-10-03T23:52:01"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:52:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só me chamar.",
+        "timestamp": "2026-10-03T23:52:02"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:52:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-03T23:52:03"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:53:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-03T23:53:06"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:53:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, Endriw. Tô por aqui se precisar de algo.",
+        "timestamp": "2026-10-03T23:53:07"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:53:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Anda logo com o contexto, Endriw.",
+        "timestamp": "2026-10-03T23:53:08"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:53:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez não sirva, Endriw. Quer decidir o que a gente vai fazer de verdade ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-03T23:53:09"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:53:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:53:11"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:53:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-03T23:53:12"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:54:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-03T23:54:10"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:54:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-03T23:54:11"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:54:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o que, Endriw? Decidiu falar por enigmas hoje ou esqueceu o resto da frase?",
+        "timestamp": "2026-10-03T23:54:12"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:54:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro foi? Me fala logo o que está passando por essa cabeça aí.",
+        "timestamp": "2026-10-03T23:54:13"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:54:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-03T23:54:14"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:54:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-03T23:54:16"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:54:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-03T23:54:43"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:54:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:54:45"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:54:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Manda a letra do que você quer resolver, Endriw.",
+        "timestamp": "2026-10-03T23:54:47"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:54:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me diz logo o que tá rolando.",
+        "timestamp": "2026-10-03T23:54:48"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:54:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-03T23:54:49"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:54:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-03T23:54:50"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:56:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda?",
+        "timestamp": "2026-10-03T23:56:07"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:56:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-03T23:56:08"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:56:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronta por aqui. Do que você precisa agora?",
+        "timestamp": "2026-10-03T23:56:09"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:56:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora foi? Fala logo o que tá rondando essa cabeça.",
+        "timestamp": "2026-10-03T23:56:10"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:56:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-03T23:56:12"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:56:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-03T23:56:13"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:56:44"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Do que precisa, então?",
+        "timestamp": "2026-10-03T23:56:45"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:56:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem fazer nada por enquanto. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-03T23:56:46"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:56:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim para quê, Endriw? Me dá a letra logo.",
+        "timestamp": "2026-10-03T23:56:47"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:56:48"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá rondando essa cabeça aí.",
+        "timestamp": "2026-10-03T23:56:49"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:56:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Tranquilo. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-03T23:56:50"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:56:51"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-03T23:56:52"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:58:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-03T23:58:34"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:58:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-03T23:58:35"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:58:35"
+    },
+    {
+        "role": "assistant",
+        "content": "E aí, Endriw. Em que posso te ajudar agora?",
+        "timestamp": "2026-10-03T23:58:36"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:58:36"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que a gente vai fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-03T23:58:37"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:58:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-03T23:58:38"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:58:38"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom então. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:58:39"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:59:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-03T23:59:13"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-03T23:59:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-03T23:59:14"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-03T23:59:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, do que você precisa?",
+        "timestamp": "2026-10-03T23:59:14"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-03T23:59:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me fala o que está passando pela sua cabeça.",
+        "timestamp": "2026-10-03T23:59:15"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-03T23:59:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-03T23:59:16"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-03T23:59:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-03T23:59:17"
+    }
+]

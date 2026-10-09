@@ -125,10 +125,85 @@ class VegaSecurity:
         self.face_validator = LocalFaceValidator(self._face_reference)
         return result
 
+    def _face_camera_candidates(self, camera_index=None):
+        """Câmeras a tentar na validação facial, em ordem de preferência.
+
+        A PRIMEIRA é sempre a mais confiável para reconhecer o dono:
+
+        1. `camera_index` explícito (quando o chamador sabe qual usar);
+        2. a câmera que o usuário escolheu no menu (é a que ele vê funcionar);
+        3. a WEBCAM DO PC, resolvida por NOME — a Iriun (celular) fica de fora
+           da escolha automática;
+        4. demais índices, apenas como último recurso.
+
+        Devolver uma lista (e não um número) é o que permite tentar outra
+        câmera quando a primeira está ocupada por outro programa — mas a
+        ordem garante que a câmera ERRADA nunca seja a primeira tentativa.
+        """
+        if camera_index is not None:
+            try:
+                return [int(camera_index)]
+            except (TypeError, ValueError):
+                pass
+
+        candidates = []
+
+        def _add(value):
+            try:
+                value = int(value)
+            except (TypeError, ValueError):
+                return
+            if value >= 0 and value not in candidates:
+                candidates.append(value)
+
+        # 1. A escolha explícita do usuário no menu de câmera.
+        try:
+            from config.camera_menu import load_preferred_camera
+
+            _add(load_preferred_camera())
+        except Exception:
+            pass
+
+        # 2. A webcam física, resolvida por nome (nunca a virtual do celular).
+        try:
+            from core.vision.camera import VegaCamera
+
+            _add(VegaCamera.select_camera())
+        except Exception:
+            pass
+
+        # 3. Demais índices, como último recurso.
+        try:
+            from core.vision.camera import VegaCamera
+
+            for index in VegaCamera.list_cameras(4):
+                _add(index)
+        except Exception:
+            pass
+
+        _add(0)
+        return candidates
+
     def capture_face_validation(self, camera_index=None):
+        """Captura e valida o rosto para um pedido sensível.
+
+        REGRA DE SEGURANÇA (a câmera da validação facial):
+
+        1. usa a câmera ESCOLHIDA pelo usuário no menu, quando houver;
+        2. senão, usa a WEBCAM DO PC — resolvida pelo NOME do dispositivo,
+           nunca por um índice fixo;
+        3. só tenta outra câmera se a primeira NÃO ABRIR — jamais aceita uma
+           câmera que abriu sem conseguir avaliar o rosto.
+
+        Antes, a lista era `[0, 1]` fixa: na máquina com a Iriun no índice 0, a
+        validação facial usava a CÂMERA DO CELULAR. Pior: o laço parava na
+        primeira câmera que simplesmente ABRISSE (`supported=True`), mesmo sem
+        rosto algum — então nem chegava a testar a webcam do PC.
+        """
         if not self.face_validator.ready:
             return False, None, None
-        camera_indices = [camera_index] if camera_index is not None else [1, 0]
+
+        camera_indices = self._face_camera_candidates(camera_index)
         supported = False
         frame = None
         face_valid = False
@@ -145,9 +220,44 @@ class VegaSecurity:
         try:
             import cv2
             cv2.imwrite(str(evidence_path), frame)
+            self._prune_evidence(evidence_dir)
             return True, bool(face_valid), str(evidence_path)
         except Exception:
             return True, bool(face_valid), None
+
+    # Manter apenas as últimas N fotos: pasta de "últimos registros",
+    # sem acumular dezenas de imagens praticamente iguais.
+    EVIDENCE_KEEP = 30
+
+    @classmethod
+    def _prune_evidence(cls, evidence_dir, keep=None):
+        """Exclui as fotos mais antigas, mantendo só as últimas `keep`."""
+        keep = keep or cls.EVIDENCE_KEEP
+        try:
+            photos = sorted(
+                p for p in evidence_dir.iterdir()
+                if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+            )
+            for old in photos[:-keep] if len(photos) > keep else []:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        except OSError:
+            pass
+
+    @staticmethod
+    def _summarize_action(action) -> str:
+        """Resumo seguro da ação para o log (sem risco de gravar o PIN).
+
+        Remove qualquer sequência longa de dígitos, que é como um PIN aparece
+        numa fala ("apaga o arquivo garfo 4321").
+        """
+        if isinstance(action, dict):
+            action = action.get("kind") or str(action)
+        text = str(action or "").strip()
+        text = re.sub(r"\b\d{4,}\b", "[pin removido]", text)
+        return text[:200]
 
     def _hash(self, value):
         return hashlib.pbkdf2_hmac("sha256", value.encode(), self._salt, 120_000).hex()
@@ -196,7 +306,55 @@ class VegaSecurity:
         )
         return any(keyword in normalized for keyword in dangerous_keywords)
 
-    def _write_audit(self, action: str, confirmed: bool, pin_valid: bool, face_valid: Optional[bool], face_supported: bool, evidence_path=None):
+    def register_security_request(self, action, source="voz"):
+        """Registra o PEDIDO de uma ação sensível e tira a foto na hora.
+
+        Este é o registro de auditoria no momento em que o usuário PEDE algo
+        perigoso — antes de qualquer senha. É o que responde "quem pediu
+        isso?" mesmo quando a pessoa erra o PIN e a ação nunca acontece.
+
+        Devolve o caminho da evidência (foto) capturada, ou None.
+        """
+        evidence_path = None
+        face_supported = False
+        try:
+            face_supported, _face_valid, evidence_path = self.capture_face_validation()
+        except Exception:
+            # Falha de câmera nunca pode impedir o registro do pedido.
+            face_supported, evidence_path = False, None
+
+        self._write_audit(
+            action,
+            confirmed=False,
+            pin_valid=False,
+            face_valid=None,
+            face_supported=face_supported,
+            evidence_path=evidence_path,
+            event="requested",
+            source=source,
+        )
+        return evidence_path
+
+    def register_auth_attempt(self, action, pin_valid, face_valid=None,
+                              face_supported=False, evidence_path=None,
+                              authorized=False, source="celular"):
+        """Registra uma TENTATIVA de autenticação (certa ou errada).
+
+        Assim, um PIN errado fica no log com data, ação e resultado — antes,
+        a tentativa falha simplesmente não era registrada em lugar nenhum.
+        """
+        self._write_audit(
+            action,
+            confirmed=True,
+            pin_valid=bool(pin_valid),
+            face_valid=face_valid,
+            face_supported=bool(face_supported),
+            evidence_path=evidence_path,
+            event="authorized" if authorized else "denied",
+            source=source,
+        )
+
+    def _write_audit(self, action: str, confirmed: bool, pin_valid: bool, face_valid: Optional[bool], face_supported: bool, evidence_path=None, event=None, source=""):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         log_path = self.path.parent / "security_audit.json"
         try:
@@ -206,10 +364,14 @@ class VegaSecurity:
         if not isinstance(existing, list):
             existing = []
 
+        # O texto da ação NUNCA é gravado cru: ele pode conter o PIN ditado
+        # ("apaga o arquivo 1234"). Guardamos um resumo seguro e o evento.
         entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            # Raw commands may contain a PIN (including spoken digits).
+            "event": event or "dangerous_action",
             "action": "dangerous_action",
+            "action_summary": self._summarize_action(action),
+            "source": source or "voz",
             "confirmed": bool(confirmed),
             "pin_valid": bool(pin_valid),
             "face_supported": bool(face_supported),
@@ -217,6 +379,9 @@ class VegaSecurity:
             "evidence_path": evidence_path,
             "authorized": bool(confirmed and pin_valid and (not face_supported or face_valid is True)),
         }
+        # Compatibilidade: quem já lê o log antigo continua achando a ação.
+        if event in (None, "dangerous_action"):
+            entry["action"] = self._summarize_action(action)
         existing.append(entry)
         log_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 

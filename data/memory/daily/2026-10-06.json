@@ -1,0 +1,1532 @@
+[
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T01:08:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-06T01:08:29"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T01:08:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-06T01:08:55"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T01:08:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o que, Endriw? Me dá a letra do que a gente tá resolvendo.",
+        "timestamp": "2026-10-06T01:08:56"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T01:08:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora foi? Fala logo o que está passando por essa cabeça.",
+        "timestamp": "2026-10-06T01:08:58"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T01:08:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Tranquilo. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T01:08:59"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T01:08:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T01:09:00"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T01:14:06"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T01:14:07"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T01:14:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-06T01:14:08"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T01:14:08"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá falando.",
+        "timestamp": "2026-10-06T01:14:15"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T01:14:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez não seja resposta, Endriw. Manda o papo reto: o que você quer fazer?",
+        "timestamp": "2026-10-06T01:14:21"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T01:14:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, do jeito que você preferir. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T01:14:25"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T01:14:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T01:14:26"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T06:03:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T06:03:11"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T06:03:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T06:03:12"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T06:03:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim para quê, Endriw? Apertei o play aqui esperando a continuação, mas você me deixou no vácuo. Manda a letra.",
+        "timestamp": "2026-10-06T06:03:14"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T06:03:14"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá rondando essa cabeça aí.",
+        "timestamp": "2026-10-06T06:03:15"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T06:03:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só chamar.",
+        "timestamp": "2026-10-06T06:03:16"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T06:03:16"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T06:03:17"
+    },
+    {
+        "role": "user",
+        "content": "E por que isso",
+        "timestamp": "2026-10-06T14:52:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Por que o quê, Endriw? Seja mais específico ou me dê contexto, não leio mentes — embora às vezes pareça que sim.",
+        "timestamp": "2026-10-06T14:52:15"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T15:02:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T15:02:33"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:02:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-06T15:02:38"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T15:02:39"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-06T15:02:41"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T15:02:42"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Esqueceu de terminar a frase ou quer que eu adivinhe?",
+        "timestamp": "2026-10-06T15:02:44"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T15:02:45"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é uma ótima resposta para quem não quer se comprometer com nada. Quer decidir logo ou vai ficar em cima do muro até quando?",
+        "timestamp": "2026-10-06T15:02:49"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T15:02:49"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-06T15:02:52"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:02:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Tô por aqui se precisar de algo real.",
+        "timestamp": "2026-10-06T15:02:57"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T15:03:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T15:03:29"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:03:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T15:03:35"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T15:03:36"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-06T15:03:40"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T15:03:41"
+    },
+    {
+        "role": "assistant",
+        "content": "Certo, estou por aqui. O que temos para agora, Endriw?",
+        "timestamp": "2026-10-06T15:03:51"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T15:03:53"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Fala logo o que tá rondando essa cabeça aí.",
+        "timestamp": "2026-10-06T15:03:54"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T15:03:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-06T15:04:01"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:04:02"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T15:04:06"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T15:22:45"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T15:22:45"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:22:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom, então seguimos em frente. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T15:23:14"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T15:23:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-06T15:23:19"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T15:23:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá fazendo ou me dá o próximo comando.",
+        "timestamp": "2026-10-06T15:23:25"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T15:23:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o que, Endriw? Decide aí ou manda a próxima.",
+        "timestamp": "2026-10-06T15:23:28"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T15:23:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-06T15:23:32"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T15:23:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T15:23:34"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:54:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T17:54:48"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T17:54:48"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T17:54:49"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T17:54:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Manda o que precisa.",
+        "timestamp": "2026-10-06T17:54:52"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T17:54:52"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vai ser ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-06T17:54:53"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T17:54:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-06T17:54:56"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:54:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-06T17:54:59"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T17:55:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T17:55:00"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T17:55:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T17:55:34"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T17:55:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T17:55:34"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:55:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T17:55:53"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T17:55:53"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda agora?",
+        "timestamp": "2026-10-06T17:55:54"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T17:55:54"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Anda logo com o contexto, Endriw.",
+        "timestamp": "2026-10-06T17:55:55"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T17:55:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me fala logo o que está rondando essa cabeça.",
+        "timestamp": "2026-10-06T17:55:56"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T17:55:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia, é só chamar.",
+        "timestamp": "2026-10-06T17:55:59"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:56:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, então seguimos assim. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T17:56:02"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T17:56:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T17:56:03"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T17:56:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T17:56:35"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T17:56:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T17:56:35"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:56:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T17:56:52"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T17:56:52"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos em frente. Me avisa se precisar de alguma coisa.",
+        "timestamp": "2026-10-06T17:56:55"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T17:56:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o que, Endriw? Me dá a letra do que a gente tá fazendo ou vai direto ao ponto.",
+        "timestamp": "2026-10-06T17:56:56"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T17:56:56"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta favorita de quem está fugindo de uma decisão. Quer resolver isso logo ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-06T17:56:57"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T17:56:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, do jeito que você preferir. Só me chamar se mudar de ideia.",
+        "timestamp": "2026-10-06T17:57:00"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T17:57:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. É só chamar se precisar.",
+        "timestamp": "2026-10-06T17:57:02"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T17:57:03"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T17:57:03"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T17:57:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T17:57:37"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T17:57:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T17:57:37"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:13:22"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T18:13:24"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:13:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T18:13:25"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:13:25"
+    },
+    {
+        "role": "assistant",
+        "content": "Pronto, o que vamos fazer agora?",
+        "timestamp": "2026-10-06T18:13:26"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:13:26"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora foi? Fala logo o que está passando por essa cabeça.",
+        "timestamp": "2026-10-06T18:13:28"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:13:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-06T18:13:30"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:13:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:13:32"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:13:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:13:33"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:14:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T18:14:09"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:14:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, tô por aqui se precisar de alguma coisa.",
+        "timestamp": "2026-10-06T18:14:11"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:14:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Diz aí, Endriw. Manda o próximo passo.",
+        "timestamp": "2026-10-06T18:14:12"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:14:12"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Vai por aí ou quer decidir o que estamos fazendo?",
+        "timestamp": "2026-10-06T18:14:14"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:14:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Fechado. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só chamar.",
+        "timestamp": "2026-10-06T18:14:15"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:14:15"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T18:14:16"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:14:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:14:17"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:14:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:14:50"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:14:50"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:14:50"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:20:20"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T18:20:21"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:20:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. O que manda agora?",
+        "timestamp": "2026-10-06T18:20:23"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:20:23"
+    },
+    {
+        "role": "assistant",
+        "content": "Diga aí, Endriw. O que vamos resolver agora?",
+        "timestamp": "2026-10-06T18:20:24"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:20:24"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer decidir nada. Quer que eu escolha por você ou prefere continuar em cima do muro?",
+        "timestamp": "2026-10-06T18:20:27"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:20:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-06T18:20:28"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:20:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-06T18:20:29"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:20:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:20:30"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:21:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:21:03"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:21:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Em Curitiba tá fazendo 18 graus agora, com sensação térmica de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:21:03"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:23:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se precisar de algo.",
+        "timestamp": "2026-10-06T18:23:21"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:23:21"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T18:23:24"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:23:24"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Se você não me der o contexto, fica difícil adivinhar do que estamos falando, Endriw. Manda a letra.",
+        "timestamp": "2026-10-06T18:23:25"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:23:26"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que a gente vai fazer ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-06T18:23:27"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:23:27"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-06T18:23:28"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:23:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-06T18:23:30"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:23:31"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:23:31"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:24:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:24:04"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:24:04"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:24:04"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:25:03"
+    },
+    {
+        "role": "assistant",
+        "content": "Tá bom, então seguimos em frente. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:25:05"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:25:05"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:25:07"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:25:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Quer continuar de onde paramos ou inventou mais alguma tarefa para mim?",
+        "timestamp": "2026-10-06T18:25:08"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:25:08"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Quer decidir o que vai ser ou vai ficar em cima do muro?",
+        "timestamp": "2026-10-06T18:25:09"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:25:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, do jeito que você preferir. Se mudar de ideia e quiser voltar para o MySQL ou BDD, é só falar.",
+        "timestamp": "2026-10-06T18:25:11"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:25:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T18:25:12"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:25:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:25:14"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:25:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:25:47"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:25:47"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:25:47"
+    },
+    {
+        "role": "user",
+        "content": "E aí Vega quero sim",
+        "timestamp": "2026-10-06T18:38:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Fala, Endriw. Manda a braba, o que a gente vai resolver agora?",
+        "timestamp": "2026-10-06T18:38:57"
+    },
+    {
+        "role": "user",
+        "content": "qual a cotação do dólar",
+        "timestamp": "2026-10-06T18:39:19"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,98, em queda de 0,31% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:39:19"
+    },
+    {
+        "role": "user",
+        "content": "E por que isso",
+        "timestamp": "2026-10-06T18:39:43"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar oscilou nessa faixa hoje puxado por movimentações do mercado externo e fluxo cambial de exportadores, batendo máxima de R$ 5,00 e recuando até R$ 5,45... quer dizer, R$ 4,95. Variação normal de dia de ajuste.",
+        "timestamp": "2026-10-06T18:39:45"
+    },
+    {
+        "role": "user",
+        "content": "mas isso tem alguma coisa a ver com as eleições",
+        "timestamp": "2026-10-06T18:40:17"
+    },
+    {
+        "role": "assistant",
+        "content": "Eleições mexem com o humor do mercado porque qualquer incerteza sobre o rumo fiscal ou econômico do próximo governo faz os investidores correrem para ativos mais seguros, como o dólar. \n\nNo cenário atual a R$ 4,98, o mercado costuma precificar expectativas: se há sinal de estabilidade fiscal, a moeda cai; se pinta volatilidade ou risco populista, o câmbio dispara na hora. É o termômetro político funcionando em tempo real.",
+        "timestamp": "2026-10-06T18:40:19"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:45:28"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-06T18:45:30"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:45:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou surgir algo, é só falar.",
+        "timestamp": "2026-10-06T18:45:32"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:45:32"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Esqueceu de terminar a frase ou tá testando minha paciência? Manda a boa.",
+        "timestamp": "2026-10-06T18:45:33"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:45:33"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" é a resposta perfeita para quem não quer se comprometer com nada. Quer decidir o que a gente vai fazer ou vai continuar enrolando?",
+        "timestamp": "2026-10-06T18:45:35"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:45:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só chamar.",
+        "timestamp": "2026-10-06T18:45:37"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:45:37"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:45:40"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:45:41"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:45:41"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:46:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. O que manda?",
+        "timestamp": "2026-10-06T18:46:08"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:46:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só falar.",
+        "timestamp": "2026-10-06T18:46:09"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:46:09"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Solta o verbo, Endriw.",
+        "timestamp": "2026-10-06T18:46:10"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:46:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me dá uma pista melhor do que está passando pela sua cabeça.",
+        "timestamp": "2026-10-06T18:46:11"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:46:12"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-06T18:46:12"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:46:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:46:13"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:46:14"
+    },
+    {
+        "role": "assistant",
+        "content": "Nesse momento, a cotação do dólar tá em R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:46:14"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:46:45"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, o que manda?",
+        "timestamp": "2026-10-06T18:46:46"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:46:46"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia ou precisar de alguma coisa, é só chamar.",
+        "timestamp": "2026-10-06T18:46:55"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:46:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá falando.",
+        "timestamp": "2026-10-06T18:47:08"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:47:08"
+    },
+    {
+        "role": "assistant",
+        "content": "\"Talvez\" não é resposta, Endriw. Vai decidir ou vai me deixar adivinhando?",
+        "timestamp": "2026-10-06T18:47:09"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:47:10"
+    },
+    {
+        "role": "assistant",
+        "content": "Combinado. Se mudar de ideia e quiser voltar para o MySQL ou BDD — ou qualquer outra coisa —, é só falar.",
+        "timestamp": "2026-10-06T18:47:11"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:47:11"
+    },
+    {
+        "role": "assistant",
+        "content": "Entendido. Me avise se mudar de ideia.",
+        "timestamp": "2026-10-06T18:47:13"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:47:13"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:47:13"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:47:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:47:43"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:47:43"
+    },
+    {
+        "role": "assistant",
+        "content": "Aqui em Curitiba o termômetro tá marcando 18 graus e sensação de 18 graus. O tempo tá nublado, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:47:43"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:47:55"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T18:47:56"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:47:56"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:47:57"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:47:57"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê, Endriw? Joga a real do que a gente tá falando.",
+        "timestamp": "2026-10-06T18:47:58"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:47:58"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decide aí ou me diz logo o que tá rondando essa cabeça.",
+        "timestamp": "2026-10-06T18:47:59"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:47:59"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, do jeito que você preferir. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:48:00"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:48:00"
+    },
+    {
+        "role": "assistant",
+        "content": "Blz, então seguimos assim. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:48:01"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:48:01"
+    },
+    {
+        "role": "assistant",
+        "content": "Hoje o dólar tá saindo por R$ 4,97, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:48:01"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:48:29"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Se mudar de ideia, é só falar.",
+        "timestamp": "2026-10-06T18:48:30"
+    },
+    {
+        "role": "user",
+        "content": "nao",
+        "timestamp": "2026-10-06T18:48:30"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, estou por aqui se precisar de algo.",
+        "timestamp": "2026-10-06T18:48:31"
+    },
+    {
+        "role": "user",
+        "content": "sim",
+        "timestamp": "2026-10-06T18:48:31"
+    },
+    {
+        "role": "assistant",
+        "content": "Sim o quê? Manda a instrução direto, Endriw.",
+        "timestamp": "2026-10-06T18:48:33"
+    },
+    {
+        "role": "user",
+        "content": "talvez",
+        "timestamp": "2026-10-06T18:48:33"
+    },
+    {
+        "role": "assistant",
+        "content": "Talvez o quê, Endriw? Decidiu ficar em cima do muro agora foi? Fala logo o que tá rondando essa cabeça aí.",
+        "timestamp": "2026-10-06T18:48:34"
+    },
+    {
+        "role": "user",
+        "content": "deixa pra lá",
+        "timestamp": "2026-10-06T18:48:34"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, Endriw. Se mudar de ideia e quiser voltar para o BDD ou pro MySQL, é só falar.",
+        "timestamp": "2026-10-06T18:48:35"
+    },
+    {
+        "role": "user",
+        "content": "não",
+        "timestamp": "2026-10-06T18:48:35"
+    },
+    {
+        "role": "assistant",
+        "content": "Beleza, então seguimos sem mexer em nada por enquanto. Me avisa se mudar de ideia.",
+        "timestamp": "2026-10-06T18:48:36"
+    },
+    {
+        "role": "user",
+        "content": "Como tá a cotação do dólar?",
+        "timestamp": "2026-10-06T18:48:37"
+    },
+    {
+        "role": "assistant",
+        "content": "O dólar tá cotado a R$ 4,97 agora, em queda de 0,48% hoje. A máxima do dia bateu R$ 5,00 e a mínima R$ 4,95.",
+        "timestamp": "2026-10-06T18:48:37"
+    },
+    {
+        "role": "user",
+        "content": "me mostra os vídeos em alta",
+        "timestamp": "2026-10-06T18:49:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Encontrei um vídeo para você: Vídeo teste.",
+        "timestamp": "2026-10-06T18:49:07"
+    },
+    {
+        "role": "user",
+        "content": "como tá o tempo em Curitiba?",
+        "timestamp": "2026-10-06T18:49:07"
+    },
+    {
+        "role": "assistant",
+        "content": "Agora em Curitiba tá 18 graus, com nublado e sensação de 18 graus, com máxima prevista de 21 graus e mínima de 12 graus.",
+        "timestamp": "2026-10-06T18:49:07"
+    }
+]
