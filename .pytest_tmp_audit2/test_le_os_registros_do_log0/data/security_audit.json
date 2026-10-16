@@ -1,1 +1,0 @@
-[{"timestamp": "2026-10-04T02:36:05+00:00", "event": "requested", "action": "dangerous_action", "action_summary": "apaga o arquivo garfo", "pin_valid": false, "face_supported": true, "face_valid": null, "evidence_path": "data/security_evidence/x.jpg", "authorized": false, "source": "voz"}]
