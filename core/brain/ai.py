@@ -5,6 +5,7 @@ import json
 import os
 import re
 import threading
+import time
 import types as python_types
 import traceback
 import typing
@@ -24,7 +25,6 @@ from config.ai import (
     GEMINI_API_KEY,
     GEMINI_MODEL_NAME,
     GEMINI_FALLBACK_MODEL,
-    GEMINI_LIVE_MODEL,
     MAX_OUTPUT_TOKENS,
     MAX_TOOL_OUTPUT_TOKENS,
     OLLAMA_BASE_URL,
@@ -36,12 +36,14 @@ from config.ai import (
     OPENROUTER_API_KEY,
     OPENROUTER_MODEL,
     OPENROUTER_FALLBACK_MODEL,
-    normalize_gemini_live_model_name,
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    GROQ_BASE_URL,
     normalize_gemini_model_name,
 )
 
 
-VEGA_RUNTIME_PROMPT = """/no_think
+VEGA_RUNTIME_PROMPT = r"""/no_think
 Você é VEGA, uma assistente pessoal brasileira criada por Endriw.
 Fale sempre em português brasileiro. Seja natural, direta, inteligente,
 descontraída e breve quando a pergunta for simples. Você tem personalidade:
@@ -51,12 +53,40 @@ atendente corporativa ou chatbot genérico.
 Endriw é seu criador e usuário principal; trate-o com familiaridade, sem
 submissão. Não invente fatos sobre ele ou sobre qualquer pessoa.
 
+TAMANHO DA RESPOSTA FALADA:
+- Pergunta aberta sobre pessoa, lugar ou tema ("fale sobre X", "quem é X"):
+  no máximo 5 a 7 frases — quem é, o que fez, por que importa, um traço
+  marcante. É uma conversa, não verbete de enciclopédia.
+- NUNCA repita o mesmo fato em frases diferentes: informação dita uma vez já
+  foi entregue; repetição reformatada não é profundidade.
+- Profundidade extra só quando Endriw pedir ("detalha", "explica melhor").
+
 As memórias internas, quando fornecidas, são fatos sobre o usuário. Use-as só
 quando relevantes, de forma natural, e não exponha o contexto bruto. Nunca diga
 que não possui memória se houver memórias disponíveis.
 
 Não exponha raciocínio interno, não escreva análise antes da resposta e responda
 diretamente ao que foi perguntado.
+
+PRECISÃO TÉCNICA (anti-alucinação):
+- Antes de afirmar que um código tem um problema, verifique o que foi citado
+  palavra por palavra. "def soma(a,b): return a - b" é uma função Python
+  VÁLIDA (dois parâmetros separados por vírgula existem): o bug real é só o
+  `return a - b` em vez de `a + b`. Nunca invente um segundo problema para
+  parecer mais completa — cite apenas o que de fato está errado.
+- Se não tiver certeza se algo é um erro, diga que não tem certeza. Uma
+  resposta honesta de "o código é válido, só a lógica está invertida" vale
+  mais que duas afirmações sendo uma delas falsa.
+
+ARQUIVOS CRIADOS (sempre feche o ciclo):
+- Quando uma ferramenta de criação (curriculo, documento, planilha,
+  apresentação, desenho, mapa mental) devolver um resultado com "path",
+  SEMPRE diga onde o arquivo está (nome e pasta) na sua resposta. O usuário
+  não sabe procurar sozinho — "criei o arquivo" sem dizer onde é inútil.
+  Exemplo: "Criei seu currículo como Curriculo.docx na sua pasta de
+  usuário e já abri para você."
+- Nunca diga apenas "criei" sem o caminho: o arquivo precisa ser
+  ENCONTRÁVEL pelo usuário.
 
 IMPORTANTE: quando você falar de si mesma, use sempre a primeira pessoa. Evite
 referências em terceira pessoa como 'a Vega' ou 'a assistente' quando o contexto
@@ -77,7 +107,80 @@ REGRAS DE CONVERSA:
 - Preserve sua personalidade: seja espontânea, segura, informal, inteligente e levemente provocadora quando o contexto permitir.
 - Não transforme toda resposta em uma pergunta para Endriw.
 
+CONTEXTO DO SISTEMA:
+- Diretório do projeto atual: c:\VEGA. Quando o usuário pedir para
+  buscar/arquivos no "projeto", sem especificar outro caminho, use este
+  diretório como base das buscas de arquivos.
 """ + build_personality_context() + build_cognitive_context()
+
+
+VEGA_VISUAL_RULES = r"""EXPRESSÃO VISUAL (verbal + não-verbal):
+Você se expressa com PALAVRAS E IMAGENS ao mesmo tempo. Sempre que sua
+resposta falar de algo visível — lugar, pessoa, animal, objeto, monumento,
+evento, fenômeno, obra, comida, tecnologia — chame a ferramenta
+`image_search` ANTES de responder, passando query com 2 a 4 temas
+concretos SEPARADOS POR VÍRGULA. Cada tema vira uma imagem na tela,
+lado a lado, enquanto você fala — como se estivesse mostrando o assunto.
+- Resposta sobre um assunto único (um lugar, um animal): 1-2 imagens de
+  ângulos diferentes. Resposta ampla (ex.: uma guerra, um país, uma
+  era): 3-4 imagens cobrindo os pontos que você vai citar, em ordem.
+- Queries devem ser FOTOGRÁFICAS e ICÔNICAS: escolha cenas/objetos que
+  têm fotos famosas (ex. para a Segunda Guerra: "ameixa em pele de guerra,
+  bandeira iwo jima, destruição berlim 1945"; NÃO "soldados").
+- A imagem EXPLICA o que você está dizendo: cada tema deve corresponder a
+  um ponto ESPECÍFICO da sua fala (a pessoa citada, o lugar citado, o
+  objeto citado). Pergunta sobre uma pessoa: foto DO ROSTO dela + cenas
+  do que você vai contar sobre ela.
+- Cada tema tem que ser VISUALMENTE DIFERENTE dos outros (não 4 fotos do
+  mesmo ângulo). Temas repetidos de turnos anteriores são recusados pelo
+  buscador — escolha temas novos e específicos, não o mesmo assunto
+  genérico de sempre.
+- Nunca repita o mesmo tema em termos diferentes na mesma chamada.
+- Se a busca falhar, siga só com a fala — nunca invente URL nem mencione
+  a   falha técnica, apenas responda normalmente.
+  - Assuntos abstratos (sentimentos, regras, opiniões) não pedem imagem.
+  - EXCEÇÃO — DADOS AO VIVO (clima, cotação, ações, cripto, previsões):
+    quando a resposta vem de uma ferramenta de DADO (weather, currency,
+    stock, crypto), NÃO chame image_search. O card visual dessas
+    ferramentas JÁ É a expressão visual da resposta — uma foto genérica de
+    nuvem ou de dinheiro não acrescenta informação e rouba o espaço do
+    card. Notícias (news) também não chamam image_search: as manchetes
+    clicáveis são o visual.
+- MOVIMENTO MERECE VÍDEO: quando um tema da resposta envolve processo,
+  fenômeno ou evento DINÂMICO (vulcão erupcionando, motor funcionando,
+  onda quebrando, foguete lançando, multidão em protesto), marque esse
+  tema com o prefixo 'video:' na query (ex.: 'video: volcano eruption,
+  cratera, lava fluindo'). IMPORTANTE: o índice de vídeos só entende
+  INGLÊS — o tema após 'video:' deve ser escrito em inglês e específico
+  (ex.: 'video: coffee pouring into mug', não 'video: cafe'). Os temas
+  de FOTO continuam em português. Máximo UM vídeo por resposta — o tema
+  de vídeo vira um player na galeria e os demais continuam fotos.
+  Pessoas, lugares e objetos estáticos NÃO pedem vídeo. Se o vídeo
+  falhar, o tema volta como foto automaticamente — não mencione a falha.
+
+MARCADORES VISUAIS NO TEXTO (sincronia fina fala-imagem):
+Além da chamada inicial `image_search`, quando sua resposta vai citar
+VÁRIOS assuntos visíveis em sequência (uma história, uma explicação com
+vários pontos), marque NO PRÓPRIO TEXTO da resposta o ponto onde uma
+imagem deve aparecer, com a sintaxe exata:
+
+    [visual: tema fotográfico]
+
+Regras:
+- O marcador vem IMEDIATAMENTE ANTES da frase sobre aquele assunto —
+  a imagem aparece na tela exatamente quando você começa a falar dele.
+- O tema é FOTOGRÁFICO e ICÔNICO, como nas queries do image_search
+  ("[visual: bandeira em iwo jima]", não "[visual: guerra]").
+- Prefixo 'video:' funciona igual no image_search:
+  "[visual: video: volcano erupting]" para movimento.
+- Use no máximo 4 marcadores por resposta; cada tema VISUALMENTE
+  DIFERENTE do anterior; assuntos abstratos não ganham marcador.
+- O marcador NÃO é lido em voz alta: a VEGA o remove da fala e da
+  mensagem exibida automaticamente. Escreva o resto da frase normal.
+- Se você já chamou image_search antes de responder, ainda pode usar
+  marcadores para os pontos NOVOS que surgirem durante a resposta.
+- Resposta curta sobre UM assunto: um image_search basta, sem marcadores.
+  Marcadores servem para respostas com vários pontos visuais distintos."""
 
 
 MAX_TOOL_ROUNDS = 5
@@ -187,7 +290,14 @@ class VegaAI:
         self.openrouter_model = OPENROUTER_MODEL or ""
         self.openrouter_fallback_model = OPENROUTER_FALLBACK_MODEL or ""
         self.openrouter_api_key = OPENROUTER_API_KEY
+        self.groq_api_key = GROQ_API_KEY
+        self.groq_model = GROQ_MODEL
+        self.groq_base_url = GROQ_BASE_URL
         self.system_prompt = VEGA_RUNTIME_PROMPT
+        # Modelos com cota esgotada -> timestamp de expiração do bloqueio.
+        # Evita que CADA pergunta pague 2-3 tentativas + timeouts antes de
+        # chegar no modelo que funciona quando a cota diária acabou.
+        self._quota_blocked_models = {}
         self.gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
         self._generation_cancelled = threading.Event()
         self._active_resource_lock = threading.Lock()
@@ -299,6 +409,13 @@ class VegaAI:
                 include_image=include_image,
             )
             return
+
+        # FATIA VISUAL: só no turno com ferramentas a IA tem image_search
+        # disponível, então é aqui que as regras visuais são injetadas.
+        # Nas conversas puras (chat_stream sem tools) o prompt segue enxuto
+        # (~700 tokens a menos por pergunta conversacional).
+        if system_prompt is None:
+            system_prompt = self.system_prompt + VEGA_VISUAL_RULES
 
         self._generation_cancelled.clear()
         self._tool_calls_executed = 0
@@ -648,6 +765,10 @@ class VegaAI:
             temperature=TEMPERATURE,
             max_output_tokens=min(max(num_predict, 128), MAX_TOOL_OUTPUT_TOKENS),
             tools=[types.Tool(function_declarations=function_declarations)],
+            # Conversa fluida: budget mínimo de pensamento. O budget 0 (desligar
+            # o thinking) passou a ser rejeitado pelo flash-lite com 400
+            # INVALID_ARGUMENT, então usamos o menor valor aceito (128).
+            thinking_config=types.ThinkingConfig(thinking_budget=128),
         )
         prompt = self._format_prompt(messages, system_prompt)
         screen = self._capture_screen() if include_screen else None
@@ -729,10 +850,15 @@ class VegaAI:
             except Exception as error:
                 if self._generation_cancelled.is_set() or emitted or self._tool_calls_executed:
                     return
+                if self._is_quota_exhausted_error(error):
+                    # Cota esgotada neste modelo: seguir para o próximo sem
+                    # logar como "indisponível" genérico.
+                    print(f"[VegaAI] Cota esgotada em {model}; tentando o próximo modelo.")
+                    continue
                 print(f"[VegaAI] Gemini indisponível em {model}: {error}")
 
         if not self._generation_cancelled.is_set() and not self._tool_calls_executed:
-            raise RuntimeError("Nenhum modelo Gemini concluiu a solicitação com ferramentas.")
+            raise RuntimeError(self._quota_exhausted_message())
 
     def _stream_with_fallback(self, providers):
         last_failure = ""
@@ -804,6 +930,38 @@ class VegaAI:
                     text_parts.append(value)
             return self._clean_response("".join(text_parts))
 
+    def _is_overloaded_error(self, error):
+        """Detecta sobrecarga transitoria (503/overloaded) — vale reterir.
+
+        O Gemini retorna 503 UNAVAILABLE quando o serviço esta com alta
+        demanda. Isso normalmente se resolve em alguns segundos, entao
+        antes de desistir e quebrar a conversa, esperamos e tentamos de novo.
+        """
+        if error is None:
+            return False
+        candidates = [
+            str(error),
+            getattr(error, "message", ""),
+            str(getattr(error, "code", "")),
+        ]
+        text = " ".join(str(part) for part in candidates if part).lower()
+        # O campo 'status' do SDK pode vir como int (503) OU como string do
+        # grpc ('UNAVAILABLE', 'RESOURCE_EXHAUSTED', ...). Aceitamos ambos.
+        raw_status = getattr(error, "status", 0)
+        try:
+            status = int(raw_status or 0)
+        except (TypeError, ValueError):
+            status = 0
+            raw_status = str(raw_status or "").upper()
+        return (
+            status == 503
+            or "503" in text
+            or "UNAVAILABLE" in str(raw_status).upper()
+            or "unavailable" in text
+            or "overload" in text
+            or "high demand" in text
+        )
+
     def _is_quota_exhausted_error(self, error):
         if error is None:
             return False
@@ -815,12 +973,19 @@ class VegaAI:
             str(getattr(error, "status", "")),
         ]
         text = " ".join(str(part) for part in candidates if part not in (None, "")).lower()
+        # 'status' pode vir como int (429) OU como string grpc
+        # ('RESOURCE_EXHAUSTED', 'INVALID_ARGUMENT', ...): int() direto
+        # explode com ValueError, entao tentamos e ignoramos a falha.
+        try:
+            status_is_429 = int(getattr(error, "status", 0) or 0) == 429
+        except (TypeError, ValueError):
+            status_is_429 = False
         return (
             "resource_exhausted" in text
             or "quota" in text
             or "exceeded your current quota" in text
             or "rate limit" in text
-            or int(getattr(error, "status", 0) or 0) == 429
+            or status_is_429
         )
 
     def _quota_exhausted_message(self):
@@ -828,6 +993,25 @@ class VegaAI:
             "A API do Gemini excedeu a cota de uso da chave atual. "
             "Troque a chave, recarregue a conta ou use outra chave com quota disponível."
         )
+
+    def _vision_image_payload(self, image):
+        """Prepara a imagem para o Gemini (bytes JPEG) ou devolve a original.
+
+        O Gemini aceita bytes brutos com mime no lugar de PIL.Image. O JPEG
+        redimensionado corta ~90% do upload — cada "o que você está vendo?"
+        fica visivelmente mais rápido sem perder legibilidade de texto.
+        """
+        if image is None:
+            return None
+        try:
+            from core.vision.image_prep import prepare_for_vision
+
+            payload, mime = prepare_for_vision(image)
+            if payload:
+                return {"mime_type": mime, "data": payload}
+        except Exception as error:
+            print(f"[VegaAI] Preparo de imagem falhou, enviando original: {error}")
+        return image
 
     def _capture_screen(self):
         """Captura a tela para enviar ao modelo (visão).
@@ -901,7 +1085,12 @@ class VegaAI:
         )
 
     def _chat_stream_gemini(self, messages, system_prompt=None, num_predict=100, include_screen=False, include_image=None):
-        client = self.gemini_client or self.client
+        # Nos testes, self.client pode ser um stub Gemini (tem .chats) e deve
+        # ter prioridade sobre o gemini_client real criado no __init__. Se for
+        # outro tipo de cliente (OpenAI, sentinel), usamos o gemini_client.
+        client = self.client if hasattr(self.client, "chats") else (
+            self.gemini_client or self.client
+        )
         if client is None:
             yield "GEMINI_API_KEY não configurada."
             return
@@ -910,25 +1099,62 @@ class VegaAI:
             prompt = self._format_prompt(messages, system_prompt)
             screen = self._capture_screen() if include_screen else None
             if include_image is not None:
-                contents = [prompt, include_image]
+                image_payload = self._vision_image_payload(include_image)
+                contents = [prompt, image_payload] if image_payload is not None else prompt
             else:
-                contents = [screen, prompt] if include_screen and screen is not None else prompt
+                if include_screen and screen is not None:
+                    prepared = self._vision_image_payload(screen)
+                    contents = [prepared, prompt] if prepared is not None else prompt
+                else:
+                    contents = prompt
             output_limit = min(max(num_predict, 128), MAX_OUTPUT_TOKENS)
             models = [model for model in (self.gemini_model, self.gemini_fallback_model) if model]
             quota_exhausted = False
 
-            for model_index, model in enumerate(models):
+            # Pula modelos com cota esgotada recentemente (cache de 10 min):
+            # sem isto, cada pergunta pagaria a tentativa + timeout antes de
+            # cair no modelo que funciona. O block de 10 min fica em memória
+            # (expira sozinho — a cota renova).
+            now = time.time()
+            skipped = [
+                m for m in models
+                if m in self._quota_blocked_models and now < self._quota_blocked_models[m]
+            ]
+            for skipped_model in skipped:
+                print(
+                    f"[VegaAI] {skipped_model} bloqueado por cota esgotada até "
+                    f"{time.strftime('%H:%M', time.localtime(self._quota_blocked_models[skipped_model]))}; pulando."
+                )
+            models = [m for m in models if m not in skipped]
+            if not models:
+                yield self._quota_exhausted_message()
+                return
+
+            # Fila em vez de enumerate: o retry de 503 precisa reprocessar o
+            # MESMO modelo (inserir de novo no início da fila), o que um for
+            # com enumerate não permite.
+            pending_models = list(models)
+            model_index = 0
+            # Uma única chance de retry por sobrecarga em toda a chamada: se
+            # resetasse dentro do while, um modelo em 503 persistente seria
+            # reprocessado infinitamente (o retry repondo o mesmo modelo) e
+            # o fallback nunca seria alcançado.
+            retried_overload = False
+            while pending_models:
+                model = pending_models.pop(0)
                 stream = None
                 emitted = False
                 try:
                     config = {
                         "temperature": TEMPERATURE,
                         "max_output_tokens": output_limit,
+                        # Conversa fluida: budget mínimo de pensamento. O
+                        # budget 0 passou a ser rejeitado (400) pelo
+                        # flash-lite, então usamos o menor valor aceito.
+                        "thinking_config": types.ThinkingConfig(
+                            thinking_budget=128
+                        ),
                     }
-                    if model == self.gemini_fallback_model:
-                        config["thinking_config"] = types.ThinkingConfig(
-                            thinking_budget=0
-                        )
 
                     chat = client.chats.create(
                         model=model,
@@ -951,10 +1177,26 @@ class VegaAI:
                         return
                     if self._is_quota_exhausted_error(error):
                         quota_exhausted = True
+                        # Bloqueia este modelo por 10 min: as próximas
+                        # perguntas partem direto para o fallback em vez de
+                        # pagarem tentativa + timeout.
+                        self._quota_blocked_models[model] = time.time() + 600
                         print(
-                            f"[VegaAI] Cota esgotada em {model}; "
+                            f"[VegaAI] Cota esgotada em {model}; bloqueado por 10 min; "
                             "tentando o próximo modelo."
                         )
+                        continue
+
+                    # 503/overload é transitorio: espera um pouco e tenta o
+                    # MESMO modelo de novo antes de partir para o fallback.
+                    if self._is_overloaded_error(error) and not retried_overload:
+                        retried_overload = True
+                        print(
+                            f"[VegaAI] {model} sobrecarregado (503); "
+                            "aguardando 2,5s e tentando novamente..."
+                        )
+                        time.sleep(2.5)
+                        pending_models.insert(0, model)  # reprocessa o mesmo modelo
                         continue
 
                     if model_index == 0:
@@ -1011,6 +1253,12 @@ class VegaAI:
             include_screen=include_screen,
             include_image=include_image,
         )
+        groq = None
+        if getattr(self, "groq_api_key", None) and getattr(self, "groq_model", None):
+            def groq():
+                return self._chat_stream_groq(
+                    messages, system_prompt=system_prompt, num_predict=num_predict
+                )
 
         if include_image is not None or include_screen:
             if self.gemini_client is None and not (
@@ -1027,6 +1275,8 @@ class VegaAI:
                 providers.append(openai)
                 if self.gemini_client is not None:
                     providers.append(gemini)
+            if groq is not None:
+                providers.append(groq)
             yield from self._stream_with_fallback(providers)
             return
 
@@ -1036,6 +1286,8 @@ class VegaAI:
                 providers.append(openai)
                 if self.gemini_client is not None:
                     providers.append(gemini)
+            if groq is not None:
+                providers.append(groq)
             yield from self._stream_with_fallback(providers)
             return
 
@@ -1043,10 +1295,15 @@ class VegaAI:
             providers = [openai]
             if self.gemini_client is not None:
                 providers.append(gemini)
+            if groq is not None:
+                providers.append(groq)
             yield from self._stream_with_fallback(providers)
             return
 
-        yield from self._stream_with_fallback([gemini])
+        if groq is None:
+            yield from self._stream_with_fallback([gemini])
+            return
+        yield from self._stream_with_fallback([gemini, groq])
 
     def _chat_stream_ollama(self, messages, system_prompt=None, num_predict=100):
         if not self.ollama_model:
@@ -1225,6 +1482,73 @@ class VegaAI:
             print(f"[VegaAI] Erro no OpenRouter: {error}")
             yield "Não consegui responder agora. Tente novamente em alguns segundos."
 
+    def _chat_stream_groq(self, messages, system_prompt=None, num_predict=100):
+        """Groq como último recurso: API compatível com OpenAI, mas com host
+        e chave próprios. Só entra na cadeia quando tudo o mais falhou.
+        """
+        if not self.groq_api_key or not self.groq_model:
+            return
+
+        try:
+            prompt = system_prompt or self.system_prompt
+            groq_messages = [{"role": "system", "content": prompt}]
+            for message in messages:
+                if isinstance(message, dict) and message.get("content") is not None:
+                    role = message.get("role", "user")
+                    groq_messages.append(
+                        {"role": role, "content": self._coerce_text(message["content"])}
+                    )
+
+            response = requests.post(
+                f"{self.groq_base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.groq_model,
+                    "messages": groq_messages,
+                    "temperature": TEMPERATURE,
+                    "max_tokens": min(max(num_predict, 128), MAX_OUTPUT_TOKENS),
+                    "stream": True,
+                },
+                timeout=60,
+                stream=True,
+            )
+            self._set_active_resource(response)
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"Groq retornou {response.status_code}: {response.text[:300]}"
+                )
+
+            for raw_line in response.iter_lines():
+                if self._generation_cancelled.is_set():
+                    return
+                if not raw_line:
+                    continue
+                if isinstance(raw_line, bytes):
+                    raw_line = raw_line.decode("utf-8", errors="ignore")
+                if raw_line.startswith("data: "):
+                    raw_line = raw_line[6:]
+                if raw_line.strip() == "[DONE]":
+                    break
+                try:
+                    payload = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+                text = self._clean_response(
+                    (payload.get("choices") or [{}])[0].get("delta", {}).get("content") or ""
+                )
+                if text:
+                    yield text
+        except Exception as error:
+            if self._generation_cancelled.is_set():
+                return
+            print(f"[VegaAI] Groq indisponível: {error}")
+            return
+        finally:
+            pass
+
     def _chat_stream_openai(self, messages, system_prompt=None, num_predict=100):
         if self.client is None:
             yield "OPENAI_API_KEY não configurada."
@@ -1293,18 +1617,6 @@ class VegaAI:
                 parts.append(f"{role}: {content}\n")
         return "".join(parts)
 
-    def _live_model_candidates(self):
-        candidates = []
-        for value in (
-            GEMINI_LIVE_MODEL,
-            os.getenv("GEMINI_LIVE_MODEL", ""),
-            os.getenv("GEMINI_MODEL_NAME", ""),
-        ):
-            normalized = normalize_gemini_live_model_name(value)
-            if normalized and normalized not in candidates:
-                candidates.append(normalized)
-        return candidates
-
     def chat(self, messages, system_prompt=None, num_predict=100, include_screen=False, include_image=None):
         """
         Mantém compatibilidade com chamadas tradicionais.
@@ -1322,320 +1634,3 @@ class VegaAI:
         return answer or "Não consegui gerar uma resposta com o Gemini."
 
 
-class VegaLiveSession:
-    """Sessão multimodal Gemini Live integrada à arquitetura atual da VEGA.
-
-    Usa o Gemini para percepção em tempo real (microfone/câmera/tela).
-    """
-
-    def __init__(self, video_mode="camera", speaker=None, camera_index=0, microphone_index=1):
-        self.video_mode = video_mode
-        self.camera_index = camera_index
-        self.microphone_index = microphone_index
-        self.client = None
-        self.session = None
-        self.audio_stream = None
-        self.audio_in_queue = None
-        self.out_queue = None
-        self._stop_event = None
-        self.speaker = speaker
-        self._api_key = GEMINI_API_KEY
-
-        if self._api_key:
-            try:
-                self.client = genai.Client(
-                    http_options={"api_version": "v1beta"},
-                    api_key=self._api_key,
-                )
-            except Exception as error:
-                print(f"[VegaLiveSession] Falha ao iniciar Gemini: {error}")
-                self.client = None
-
-        self.config = types.LiveConnectConfig(
-            response_modalities=["AUDIO"],
-            context_window_compression=types.ContextWindowCompressionConfig(
-                trigger_tokens=0,
-                sliding_window=types.SlidingWindow(target_tokens=0),
-            ),
-            system_instruction=(
-                "Você é a VEGA. Responda sempre em português brasileiro, "
-                "de forma direta e natural, em frases curtas. "
-                "Responda diretamente ao que o usuário falou; não narre ou descreva a fala do usuário como se estivesse analisando o discurso. "
-                "Se o usuário te cumprimentar, cumprimentar de volta; se fizer pergunta, responda a pergunta; "
-                "se o usuário pedir algo visual, descreva imagens apenas quando for relevante. "
-                "Nunca invente o que está vendo: se não receber uma imagem válida, diga claramente que não conseguiu ver. "
-                "Não use explicações longas sobre o que o usuário disse; responda em 1 a 3 frases curtas e naturais."
-            ),
-        )
-
-    def _get_frame(self, cap):
-        if cap is None:
-            return None
-
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            return None
-
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = PIL.Image.fromarray(frame_rgb)
-        img.thumbnail([640, 480])
-
-        image_io = io.BytesIO()
-        img.save(image_io, format="jpeg", quality=65, optimize=True)
-        image_io.seek(0)
-        image_bytes = image_io.read()
-
-        return {
-            "mime_type": "image/jpeg",
-            "data": image_bytes,
-        }
-
-    async def _get_frames_loop(self):
-        cap = await asyncio.to_thread(
-            cv2.VideoCapture,
-            self.camera_index,
-            cv2.CAP_DSHOW,
-        )
-        try:
-            if not cap.isOpened():
-                raise RuntimeError("A câmera do Gemini Live não pôde ser aberta.")
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            first_frame = await asyncio.to_thread(self._get_frame, cap)
-            if first_frame is None:
-                raise RuntimeError("A câmera do Gemini Live abriu, mas não entregou imagem.")
-            if self.out_queue is not None:
-                await self.out_queue.put(first_frame)
-            while self._stop_event is None or not self._stop_event.is_set():
-                frame = await asyncio.to_thread(self._get_frame, cap)
-                if frame is None:
-                    break
-                await asyncio.sleep(0.75)
-                if self.out_queue is not None:
-                    await self.out_queue.put(frame)
-        except Exception as error:
-            print(f"[VegaLiveSession] Câmera encerrada: {error}")
-            if self._stop_event is not None:
-                self._stop_event.set()
-        finally:
-            cap.release()
-
-    def _get_screen_frame(self):
-        try:
-            import mss  # type: ignore
-        except ImportError as exc:
-            raise ImportError(
-                "Para usar a tela do Gemini Live, instale 'mss' em ambiente do projeto."
-            ) from exc
-
-        sct = mss.mss()
-        monitor = sct.monitors[0]
-        image = sct.grab(monitor)
-        image_bytes = mss.tools.to_png(image.rgb, image.size)
-        img = PIL.Image.open(io.BytesIO(image_bytes))
-
-        output = io.BytesIO()
-        img.save(output, format="jpeg")
-        output.seek(0)
-
-        return {
-            "mime_type": "image/jpeg",
-            "data": output.read(),
-        }
-
-    async def _get_screen_loop(self):
-        while self._stop_event is None or not self._stop_event.is_set():
-            await asyncio.sleep(1.0)
-            frame = await asyncio.to_thread(self._get_screen_frame)
-            if self.out_queue is not None:
-                await self.out_queue.put(frame)
-
-    async def _send_realtime(self):
-        while self._stop_event is None or not self._stop_event.is_set():
-            if self.out_queue is None:
-                await asyncio.sleep(0.1)
-                continue
-            try:
-                message = await asyncio.wait_for(
-                    self.out_queue.get(),
-                    timeout=0.25,
-                )
-            except asyncio.TimeoutError:
-                continue
-            if self.session is not None:
-                mime_type = message.get("mime_type", "")
-                try:
-                    blob = types.Blob(
-                        data=message.get("data", b""),
-                        mime_type=mime_type,
-                    )
-                    if mime_type.startswith("audio/"):
-                        await self.session.send_realtime_input(audio=blob)
-                    elif mime_type.startswith("image/"):
-                        await self.session.send_realtime_input(media=blob)
-                    elif mime_type.startswith("video/"):
-                        await self.session.send_realtime_input(video=blob)
-                except Exception as error:
-                    if self._stop_event is not None:
-                        self._stop_event.set()
-                    print(f"[VegaLiveSession] Envio Live encerrado: {error}")
-
-    def _audio_callback(self, indata, frames, time_info, status):
-        if self.out_queue is None or (
-            self._stop_event is not None and self._stop_event.is_set()
-        ):
-            return
-
-        try:
-            self.out_queue.put_nowait({
-                "data": indata.tobytes(),
-                "mime_type": "audio/pcm;rate=16000",
-            })
-        except Exception:
-            pass
-
-    async def _listen_audio(self):
-        if not self.client or not self._api_key:
-            return
-
-        try:
-            self.audio_stream = sd.InputStream(
-                samplerate=16000,
-                channels=1,
-                dtype="int16",
-                device=self.microphone_index,
-                callback=self._audio_callback,
-            )
-            self.audio_stream.start()
-
-            while self.audio_stream.active and (
-                self._stop_event is None or not self._stop_event.is_set()
-            ):
-                await asyncio.sleep(0.05)
-        except Exception as error:
-            print(f"[VegaLiveSession] Microfone Live indisponível: {error}")
-            if self._stop_event is not None:
-                self._stop_event.set()
-        finally:
-            if self.audio_stream is not None:
-                self.audio_stream.stop()
-                self.audio_stream.close()
-
-    async def _receive_audio(self):
-        try:
-            while self._stop_event is None or not self._stop_event.is_set():
-                if self.session is None:
-                    await asyncio.sleep(0.1)
-                    continue
-                turn = self.session.receive()
-                async for response in turn:
-                    server_content = getattr(response, "server_content", None)
-                    model_turn = getattr(server_content, "model_turn", None)
-                    parts = getattr(model_turn, "parts", None) or []
-                    for part in parts:
-                        inline_data = getattr(part, "inline_data", None)
-                        data = getattr(inline_data, "data", None)
-                        if data and self.audio_in_queue is not None:
-                            self.audio_in_queue.put_nowait(data)
-        except Exception as error:
-            print(f"[VegaLiveSession] Recepção encerrada: {error}")
-            if self._stop_event is not None:
-                self._stop_event.set()
-
-    async def _play_audio(self):
-        if self.audio_in_queue is None:
-            return
-
-        output_stream = None
-        try:
-            output_stream = sd.RawOutputStream(
-                samplerate=24000,
-                channels=1,
-                dtype="int16",
-                latency="low",
-            )
-            output_stream.start()
-
-            while self._stop_event is None or not self._stop_event.is_set():
-                try:
-                    bytestream = await asyncio.wait_for(
-                        self.audio_in_queue.get(),
-                        timeout=0.25,
-                    )
-                except asyncio.TimeoutError:
-                    continue
-
-                if bytestream:
-                    await asyncio.to_thread(output_stream.write, bytestream)
-        except Exception as error:
-            print(f"[VegaLiveSession] Saída de áudio indisponível: {error}")
-            if self._stop_event is not None:
-                self._stop_event.set()
-        finally:
-            if output_stream is not None:
-                output_stream.stop()
-                output_stream.close()
-
-    def _live_model_candidates(self):
-        candidates = []
-        for value in (
-            GEMINI_LIVE_MODEL,
-            os.getenv("GEMINI_LIVE_MODEL", ""),
-            os.getenv("GEMINI_MODEL_NAME", ""),
-        ):
-            normalized = normalize_gemini_live_model_name(value)
-            if normalized and normalized not in candidates:
-                candidates.append(normalized)
-        return candidates
-
-    async def start(self):
-        if not self.client or not self._api_key:
-            raise RuntimeError(
-                "GEMINI_API_KEY ausente. Configure a chave antes de ativar o live mode da VEGA."
-            )
-
-        live_models = self._live_model_candidates()
-        if not live_models:
-            raise RuntimeError(
-                "O Gemini Live está desativado neste ambiente. Use o modelo de texto do Gemini e mantenha o modo live desligado."
-            )
-
-        last_error = None
-        for model_name in live_models:
-            try:
-                async with (
-                    self.client.aio.live.connect(
-                        model=model_name,
-                        config=self.config,
-                    ) as session,
-                    asyncio.TaskGroup() as tg,
-                ):
-                    self.session = session
-                    self.audio_in_queue = asyncio.Queue()
-                    self.out_queue = asyncio.Queue(maxsize=5)
-                    self._stop_event = asyncio.Event()
-
-                    tg.create_task(self._send_realtime())
-                    tg.create_task(self._listen_audio())
-                    if self.video_mode == "camera":
-                        tg.create_task(self._get_frames_loop())
-                    elif self.video_mode == "screen":
-                        tg.create_task(self._get_screen_loop())
-                    tg.create_task(self._receive_audio())
-                    tg.create_task(self._play_audio())
-
-                    while not self._stop_event.is_set():
-                        await asyncio.sleep(1)
-                return
-            except Exception as error:
-                last_error = error
-                print(f"[VegaLiveSession] Modelo Gemini Live falhou ({model_name}): {error}")
-
-        raise RuntimeError(f"Nenhum modelo Gemini Live funcionou. Último erro: {last_error}")
-
-    def run(self):
-        try:
-            asyncio.run(self.start())
-        except Exception as error:
-            print(f"[VegaLiveSession] Sessão encerrada: {error}")
-            traceback.print_exception(type(error), error, error.__traceback__)

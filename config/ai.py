@@ -50,11 +50,24 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
 # Preencha no .env apenas quando quiser rodar 100% offline com Ollama local.
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
 OLLAMA_FALLBACK_MODEL = os.getenv("OLLAMA_FALLBACK_MODEL", "").strip()
+# Modelo de VISÃO local (fallback quando a cota do Gemini esgota). Deve ser um
+# modelo multimodal, ex. "qwen3.5:4b". Vazio desativa o fallback de visão.
+OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "").strip()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL_NAME = normalize_gemini_model_name(os.getenv("GEMINI_MODEL_NAME", ""))
 GEMINI_FALLBACK_MODEL = normalize_gemini_model_name(os.getenv("GEMINI_FALLBACK_MODEL", ""))
 GEMINI_LIVE_MODEL = normalize_gemini_live_model_name(os.getenv("GEMINI_LIVE_MODEL", ""))
+
+# --- Groq (fallback final quando todos os outros provedores caem) ---
+# API compatível com OpenAI (https://api.groq.com/openai/v1) — reusa o mesmo código.
+# ATENÇÃO: o modelo default precisa EXISTIR na conta. "llama-3.3-70b-versatile"
+# foi descontinuado (404 model_not_found em 2026-10-21) e o fallback inteiro
+# morria sem ninguém perceber. "openai/gpt-oss-120b" é o maior modelo
+# disponível na conta hoje — confirme em GET /openai/v1/models quando trocar.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip()
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # ==========================================================
 # TYPED PROVIDER SETTINGS
@@ -123,9 +136,9 @@ TEMPERATURE = 0.25
 # Contexto e geração maiores para evitar respostas cortadas em perguntas simples.
 CONTEXT_SIZE = 8192
 # Sem limites artificiais agressivos para perguntas curtinhas.
-MAX_OUTPUT_TOKENS = 512
+MAX_OUTPUT_TOKENS = 2048
 MAX_TOOL_OUTPUT_TOKENS = 4096
-MAX_HISTORY = 5
+MAX_HISTORY = 8
 
 def load_ai_settings() -> AISettings:
     """Monta um AISettings tipado a partir das variáveis de ambiente."""
@@ -145,7 +158,7 @@ def load_ai_settings() -> AISettings:
         gemini=ProviderSettings(
             name="gemini",
             api_key=GEMINI_API_KEY,
-            model=GEMINI_MODEL_NAME or GEMINI_LIVE_MODEL,
+            model=GEMINI_MODEL_NAME,
             fallback_model=GEMINI_FALLBACK_MODEL or None,
         ),
         ollama_base_url=OLLAMA_BASE_URL,

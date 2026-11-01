@@ -5,7 +5,7 @@ import os
 import threading
 
 from core.brain.ai import VegaAI
-from core.brain.action_narration import narrate_action_result
+from core.brain.action_narration import narrate_action_result, local_narration_enabled
 from core.brain.tool_receipt import build_receipt
 from config.cognitive import mode_is_generated
 from core.brain.conversation import Conversation
@@ -13,9 +13,21 @@ from core.memory.memory import VegaMemory
 from core.actions.commands import VegaCommands
 from core.actions.commands_parser import VegaCommandsParser
 from core.actions.modes import VegaModes
-from core.brain.text_utils import normalize_text, remove_vega_prefix, is_short_nonsense
-from core.brain.time_answer import answer_time_or_date_question, portuguese_number
+from core.brain.text_utils import (
+    normalize_text, remove_vega_prefix, is_short_nonsense, varied_listening,
+    is_small_talk, varied_small_talk,
+)
+from core.brain.time_answer import (
+    answer_time_or_date_question,
+    extract_trailing_time_date_question,
+    portuguese_number,
+)
 from core.brain.visual_triggers import classify_visual_request
+from core.brain.visual_markers import strip_marker
+from core.vision.continuous import ContinuousVision
+from core.brain.capability_answer import (
+    is_capability_question, summarize_capabilities,
+)
 from core.knowledge import KnowledgeBase
 from core.brain import number_words as BrainNumberWords
 from core.memory.memory_context import inject_memory
@@ -79,8 +91,11 @@ class VegaBrain:
         self.environment_callback = None
         self.holographic_command_callback = None
         self.tool_result_callback = None
+        # Busca visual em background: função chamada quando os downloads
+        # terminam (encadeia com o sinal da UI — configurado em vega.py).
+        self.images_done_callback = None
         self.camera_frame_callback = None
-        # Canvas de desenho ao vivo (Fase 3): janela própria, orbe intocado.
+        # Canvas de desenho ao vivo (Fase 3): janela própria.
         self.canvas_callback = None
         self.scheduler_notification_callback = None
         self._response_cancelled = threading.Event()
@@ -91,10 +106,20 @@ class VegaBrain:
         # ======================================================
 
         self.commands = VegaCommands(ai=self.ai, memory=self.memory)
+        self.commands.brain = self
 
         # Canal para o painel da interface: prints e resultados visuais
         # aparecem dentro da própria VEGA, além do visualizador do sistema.
         self.commands._result_callback = self._emit_tool_result
+
+        # Música de fundo da inicialização: quando a VEGA começa a tocar
+        # qualquer mídia (player interno, Spotify...), a música ambiente
+        # para — duas fontes de áudio ao mesmo tempo incomodam.
+        try:
+            from vega import stop_background_music
+            VegaCommands._stop_background_hook = staticmethod(stop_background_music)
+        except Exception:
+            pass
 
         self.commands_parser = VegaCommandsParser(
             self.commands
@@ -135,65 +160,6 @@ class VegaBrain:
         # Monitor de conexão: o MIUI desliga a depuração sem fio sozinho,
         # então a VEGA tenta reconectar em segundo plano.
         self.phone_monitor = None
-        # Modo live (conversa em tempo real): None até ser ligado. O callback
-        # de ferramenta é o gancho que faz o desenho ao vivo aparecer na tela.
-        self.live_session = None
-        self.live_tool_callback = self._on_live_tool_call
-
-    # ==========================================================
-    # MODO LIVE (conversa em tempo real)
-    # ==========================================================
-    # O modo live é ADITIVO: o pipeline de turnos continua sendo o padrão, e
-    # este caminho só é usado quando ligado explicitamente. Ele não toca em
-    # nada do fluxo atual — apenas abre uma sessão contínua à parte.
-
-    def start_live_mode(self, video_mode=None, on_text=None, on_status=None):
-        """Liga o modo live. Devolve True se a sessão iniciou."""
-        existing = getattr(self, "live_session", None)
-        if existing is not None and existing.is_running:
-            return True
-        try:
-            from core.brain.live_session import build_live_session
-            session = build_live_session(
-                self, on_text=on_text, on_status=on_status, video_mode=video_mode
-            )
-        except Exception as error:
-            print(f"[VEGA Live] Não foi possível preparar: {error}")
-            return False
-        self.live_session = session
-        return session.start()
-    def stop_live_mode(self):
-        """Encerra o modo live, se estiver ativo."""
-        session = getattr(self, "live_session", None)
-        if session is not None:
-            try:
-                session.stop()
-            except Exception:
-                pass
-
-    def live_mode_active(self):
-        session = getattr(self, "live_session", None)
-        return bool(session is not None and session.is_running)
-
-    def _on_live_tool_call(self, name, arguments, result):
-        """Reage a uma ferramenta executada DURANTE a conversa contínua.
-
-        É o que faz a VEGA desenhar ao vivo: quando o modelo chama `draw_image`
-        no meio da conversa, o desenho aparece na tela enquanto ela fala. Sem
-        este gancho, o modelo poderia pedir o desenho e ele nunca seria visto.
-        """
-        if str(name or "") != "draw_image" or not isinstance(arguments, dict):
-            return
-        callback = getattr(self, "canvas_callback", None)
-        if not callable(callback):
-            return
-        try:
-            callback(str(arguments.get("title") or "Desenho"), {
-                "title": str(arguments.get("title") or "Desenho"),
-                "shapes": arguments.get("shapes") or [],
-            })
-        except Exception as error:
-            print(f"[VEGA Live] Não consegui desenhar ao vivo: {error}")
 
     def start_phone_monitor(self, interval=90.0):
         """Liga o monitor de conexão do celular (chamado no startup da VEGA)."""
@@ -237,12 +203,19 @@ class VegaBrain:
                 print(f"[VEGA] Não foi possível exibir o resultado: {error}")
 
     def _narrate_local_result(self, user_text, factual_result, *, spend_tokens=True):
-        """Narra o fato de uma ação já concluída, sem alterar a execução."""
+        """Narra o fato de uma ação já concluída, sem alterar a execução.
+
+        Economia de créditos: resultados mecânicos curtos ("O Paint abriu.")
+        recebem narração local variada sem chamar o modelo, se o modo global
+        de economia estiver ativo (VEGA_NARRATION_LOCAL, padrão ligado).
+        """
+        local_ok = spend_tokens and local_narration_enabled()
         return narrate_action_result(
             getattr(self, "ai", None),
             user_text,
             factual_result,
             enabled=mode_is_generated() and spend_tokens,
+            local_ok=local_ok,
         )
 
     def _handle_task_workflow(self, text):
@@ -250,6 +223,29 @@ class VegaBrain:
         if workflow is None:
             return None
         return workflow.handle(text)
+
+    def _answer_capability_question(self, text):
+        """Resposta LOCAL à pergunta 'o que você pode fazer?'.
+
+        A pergunta é recorrente (logs de 01/10 e 11/10/2026) e não tinha
+        caminho: caía no None do parser e ia gastar tokens para a IA
+        improvisar — às vezes inventando capacidade que não existe.
+        Aqui a resposta é construída do catálogo real de capacidades, custo
+        zero, no tom da VEGA.
+        """
+        if not is_capability_question(text):
+            return None
+        try:
+            from core.capabilities import CapabilityCatalog
+            catalog = CapabilityCatalog.build(
+                commands_parser=getattr(self, "commands_parser", None),
+                tool_manager=getattr(self, "tool_manager", None),
+            )
+            answer = summarize_capabilities(catalog.inventory())
+        except Exception:
+            answer = summarize_capabilities(None)
+        self._record_local_turn(text, answer, kind="capabilities")
+        return answer
 
     def _activate_work_mode_from_task(self):
         try:
@@ -395,6 +391,16 @@ class VegaBrain:
         self._pending_close_app = last_app
         return f"Você quer que eu feche o {last_app}?"
 
+    def _is_pure_time_or_date_question(self, normalized):
+        """A fala é SÓ uma pergunta de hora ou data (sem outro assunto)?
+
+        "que horas são" -> sim. "notícias de hoje" -> não (o assunto é
+        notícias; "hoje" é detalhe). Usada para decidir se a resposta local
+        de hora/data deve ter prioridade sobre as ferramentas.
+        """
+        answer = answer_time_or_date_question(normalized)
+        return answer is not None
+
     def _is_visual_analysis_request(self, normalized):
         """A fala pede análise visual (tela ou câmera)?
 
@@ -416,6 +422,78 @@ class VegaBrain:
         """
         return classify_visual_request(normalized).wants_camera
 
+    # ==========================================================
+    # OLHO NA TELA — visão contínua
+    # ==========================================================
+
+    _WATCH_STOP_RE = re.compile(
+        r"\b(?:para(?:r)?(?:\s+de)?|pare|cancela(?:r)?(?:\s+o)?|desliga(?:r)?(?:\s+o)?)\s+(?:de\s+)?"
+        r"(?:olhar|olho|observar|assistir|vigiar|monitorar|monitoramento|monitorando)\b",
+        re.IGNORECASE,
+    )
+
+    _WATCH_START_RE = re.compile(
+        r"\b(?:fica(?:r)?|fica|fique|continua(?:r)?|vem|vai)\s+(?:de\s+olho|olhando|monitorando|vigilante)\b"
+        r"|\b(?:me\s+)?(?:avisa|avise|me\s+avise|me\s+avisa|alerta|notifica)\s+(?:quando|se|assim\s+que)\b"
+        r"|\b(?:olho\s+na\s+tela|vigia\s+a\s+tela|monitora\s+a\s+tela)\b",
+        re.IGNORECASE,
+    )
+
+    def _stop_continuous_vision(self, normalized):
+        if not self._WATCH_STOP_RE.search(normalized):
+            return None
+        watcher = getattr(self, "continuous_vision", None)
+        if watcher is not None and watcher.is_running:
+            watcher.stop()
+            return "Ok, parei de olhar a tela."
+        return "Não estou de olho em nada agora."
+
+    def _maybe_start_continuous_vision(self, normalized):
+        if not self._WATCH_START_RE.search(normalized):
+            return None
+        # Só é pedido de visão contínua se citar tela/aviso — "fica de olho"
+        # genérico é conversa e não deve ligar a captura.
+        if not re.search(r"\btela\b|\bmonitor\b|\bpagina\b|\bsite\b|\bresultado\b|\bpreco\b|\bpreço\b", normalized):
+            return None
+
+        capture = getattr(self, "screen_capture_callback", None)
+        if not callable(capture):
+            capture = lambda: __import__("core.actions.screenshot", fromlist=["capture_image"]).capture_image()
+
+        watcher = getattr(self, "continuous_vision", None)
+        if watcher is None:
+            watcher = ContinuousVision(
+                capture_fn=capture,
+                analyze_fn=self._analyze_vision_frame,
+                speak_fn=getattr(self, "continuous_vision_speak", None),
+                interval_seconds=15.0,
+            )
+            self.continuous_vision = watcher
+
+        if watcher.is_running:
+            return "Já estou de olho na tela. Continuo avisando se algo mudar."
+
+        # A instrução é a própria fala, sem os verbos de comando.
+        instruction = re.sub(
+            r"\b(?:vega[,\s]+)?(?:fica(?:r)?|fique|continua|vem|vai)\s+(?:de\s+olho|olhando|monitorando|vigilante)\s*(?:na|no|em)?\s*(?:tela|monitor|pagina)?\s*(?:e|quando|se|me\s+avisa|me\s+avise|avisa|avise)?\s*",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        ).strip(" ,.;:")
+        watcher.start(instruction=instruction)
+        return "Certo, vou ficar de olho na tela e te aviso se algo importante mudar."
+
+    def _analyze_vision_frame(self, messages, include_image=None, num_predict=200):
+        try:
+            return self.ai.chat(
+                messages,
+                include_image=include_image,
+                num_predict=num_predict,
+            )
+        except Exception as error:
+            print(f"[VEGA Visão Contínua] Análise falhou: {error}")
+            return ""
+
     def _visual_request_image(self, text, image=None):
         camera_request = self._is_camera_analysis_request(self._normalize_text(text))
         if not camera_request or image is not None:
@@ -428,34 +506,42 @@ class VegaBrain:
             return True, capture()
         except Exception as error:
             print(f"[VEGA Camera] Não consegui capturar um frame: {error}")
+            # A câmera pode ter falhado por índice errado (câmera virtual
+            # selecionada por padrão): tenta a próxima câmera disponível.
+            try:
+                camera = getattr(self, "camera", None)
+                if camera is not None:
+                    next_index = camera.next_camera()
+                    if next_index is not None:
+                        print(f"[VEGA Camera] Tentando a câmera {next_index}...")
+                        return True, capture()
+            except Exception:
+                pass
             return True, None
 
     def _build_visual_prompt(self, text, previous_summary=None):
         normalized = self._normalize_text(text)
         camera_request = self._is_camera_analysis_request(normalized)
+        fonte = "um frame atual da câmera do usuário" if camera_request else "uma captura atual da tela do usuário"
         prompt = (
-            "Você está vendo uma captura atual da tela do usuário. Ajude com a tarefa que ele está tentando fazer; "
-            "não se limite a descrever o que aparece. Responda em português brasileiro, com orientações claras e acionáveis. "
-            "Se for código, use apenas detalhes visíveis como linguagem, mensagem de erro e trecho relevante; explique o provável problema e sugira o próximo passo sem inventar contexto. "
-            "Se for atividade escolar, ensine o raciocínio em etapas e adapte a explicação ao que está na tela. "
-            "Se não conseguir identificar o objetivo ou faltar informação, diga brevemente o que conseguiu observar e faça uma única pergunta específica sobre o que o usuário está tentando fazer."
+            f"Você está vendo um {fonte}. A pessoa está falando com você por VOZ — a resposta vai ser LIDA em voz alta, então escreva como você FALA, não como um texto. "
+            "Use frases curtas e naturais, do jeito que uma pessoa fala de verdade: 'Então... acho que o problema é X', 'Vi aqui que...', 'Olha, dá pra resolver assim:'. "
+            "Nada de listas com marcadores, títulos, seções ou formatação de documento — o ouvinte não vê nada disso, só escuta. "
+            "Ajude com a tarefa que a pessoa está tentando fazer, sem se limitar a descrever o que aparece. Seja direto e fale na primeira pessoa, como um assistente do lado dela. "
+            "Se for código, comente apenas o que dá pra ver (linguagem, mensagem de erro, trecho visível) e sugira o próximo passo sem inventar contexto. "
+            "Se for atividade escolar, ensine o raciocínio passo a passo, como um professor explicando em voz alta, adaptado ao que está na tela. "
+            "Se não conseguir identificar o objetivo, diga em uma frase o que conseguiu ver e pergunte de forma natural o que a pessoa está tentando fazer — sem parecer um formulário."
         )
-
-        if camera_request:
-            prompt = prompt.replace(
-                "captura atual da tela do usuário",
-                "frame atual da câmera do usuário",
-            )
 
         if "mapa mental" in normalized:
             prompt = (
-                "Faça um mapa mental resumido e organizado do tema principal que aparece na tela. "
-                "Use uma estrutura curta com conceito central, 3 a 5 ramificações e um resumo final. "
-                "Se tiver um assunto visível, conecte as ideias de forma natural."
+                "Faça um mapa mental FALADO do tema principal que aparece na tela — a pessoa vai OUVIR, não ler. "
+                "Comece pelo conceito central, depois percorra de 3 a 5 ramificações em frases curtas e conectadas ('O tema central é X. A partir dele, temos A... depois B... e por fim C...'), "
+                "e feche com um resumo rápido em uma ou duas frases. Sem marcadores, sem títulos, sem formatação — apenas fala fluida e organizada."
             )
 
         if previous_summary:
-            prompt += f"\nResumo visual anterior: {previous_summary}"
+            prompt += f"\nResumo visual anterior (para dar continuidade à conversa, sem repetir o que já foi dito): {previous_summary}"
 
         return prompt
 
@@ -520,6 +606,10 @@ class VegaBrain:
     # ==========================================================
 
     def process(self, text, image=None):
+        # Entrada nunca pode derrubar o cérebro: None/objetos viram string.
+        if text is None:
+            text = ""
+        text = str(text)
 
         text = text.strip()
 
@@ -530,7 +620,7 @@ class VegaBrain:
         normalized = self._remove_vega_prefix(normalized)
 
         if not normalized:
-            return "Estou ouvindo."
+            return varied_listening()
 
         if normalized in {
             "ue",
@@ -554,7 +644,12 @@ class VegaBrain:
             "tudo",
             "tá tudo",
         }:
-            return "Estou ouvindo."
+            return varied_listening()
+
+        # Portão de small talk local: "bom dia", "boa tarde", "obrigado vega"
+        # respondem em 0ms sem ir à nuvem (ver processo_stream_locked).
+        if is_small_talk(normalized):
+            return varied_small_talk(normalized)
 
         if self._is_short_nonsense(normalized):
             # Antes de descartar: pode ser resposta a uma pergunta pendente
@@ -562,7 +657,11 @@ class VegaBrain:
             pending_answer = self._answer_pending_question(normalized)
             if pending_answer is not None:
                 return pending_answer
-            return "Estou ouvindo."
+            return varied_listening()
+
+        capability_response = self._answer_capability_question(normalized)
+        if capability_response is not None:
+            return capability_response
 
         pending_answer = self._answer_pending_question(normalized)
         if pending_answer is not None:
@@ -601,6 +700,25 @@ class VegaBrain:
             return self._narrate_local_result(
                 text, "Abrindo a visualização do meu segundo cérebro."
             )
+
+        # ======================================================
+        # FERRAMENTAS vêm ANTES da resposta local de hora/data.
+        # Sem isto, "notícias de hoje" casava na guarda de data
+        # (por causa de "hoje") e a VEGA respondia o dia em vez de
+        # buscar notícias. A ferramenta é a intenção dominante;
+        # hora/data só responde quando nenhuma ferramenta encaixa.
+        #
+        # EXCEÇÃO: hora/data puras ("que horas são", "que dia é hoje")
+        # continuam com a resposta local em português — a ferramenta
+        # current_time/current_date devolve texto cru ("18:00:38") que
+        # soa robótico na fala, e a frase local é melhor.
+        # ======================================================
+        pure_time_date = self._is_pure_time_or_date_question(normalized)
+        if not pure_time_date:
+            tool_response = self._process_tool_request(normalized)
+            if tool_response is not None:
+                self.orchestrator.complete_task()
+                return tool_response
 
         time_date_response = self._answer_time_or_date_question(normalized)
         if time_date_response is not None:
@@ -669,11 +787,25 @@ class VegaBrain:
             self._record_local_turn(text, continuation_response, kind="command")
             return continuation_response
 
+        # MULTI-INTENÇÃO: várias ações numa fala ("toca música e abre a
+        # calculadora e me fala o tempo"). Testada ANTES do comando único —
+        # precisa de pelo menos 2 cláusulas resolvíveis para assumir o turno.
+        multi_response = self._process_multi_intent(normalized)
+        if multi_response is not None:
+            self.orchestrator.complete_task()
+            self._record_local_turn(text, multi_response, kind="command")
+            return multi_response
+
         command_response = self._process_command(
             normalized
         )
 
         if command_response is not None:
+            # MULTI-ETAPA: mesmo suporte do caminho de streaming — anexa a
+            # resposta da pergunta de hora/data secundária, se houver.
+            trailing_time = extract_trailing_time_date_question(normalized)
+            if trailing_time:
+                command_response = f"{command_response} {trailing_time}"
             self.orchestrator.complete_task()
             # A VEGA lembra do que disse: sem isto, "aumenta o volume" + "aumenta
             # mais" deixava a IA sem "mais o quê?" (mesmo bug da cotação).
@@ -681,16 +813,8 @@ class VegaBrain:
             return command_response
 
         # ======================================================
-        # TOOLS / APIs EXTERNAS
-        # ======================================================
-
-        tool_response = self._process_tool_request(
-            normalized
-        )
-
-        if tool_response is not None:
-            self.orchestrator.complete_task()
-            return tool_response
+        # (ferramentas já foram avaliadas ANTES da resposta de hora/data,
+        # acima — intenção de ferramenta vence data/hora local)
 
         if self.agent_orchestrator.is_complex_task(text):
             return self.agent_orchestrator.handle_task(text)
@@ -735,9 +859,73 @@ class VegaBrain:
         self.ai.cancel_generation()
         SESSION_METRICS.record(cancelled_turns=1)
 
+    # ==========================================================
+    # OTIMIZAÇÃO DE LATÊNCIA DA IA
+    # ==========================================================
+
+    # Perguntas puramente explicativas/conversacionais: não precisam de
+    # ferramentas executáveis (corta ~2500 tokens de schemas e reduz o TTFT
+    # pela metade). Comandos de mídia/abrir app já são capturados antes pelo
+    # parser local, então estes padrões só atingem fala conversacional.
+    _PURE_EXPLANATORY_RE = re.compile(
+        r"^\s*(?:como\s+(?:eu\s+)?fa[çc]o|como\s+fazer|como\s+se\s+faz|"
+        r"o\s+que\s+[ée]|oque\s+[ée]|explique|me\s+ensine|ensina\s+(?:eu\s+)?(?:a|como)|"
+        r"me\s+conta|conta\s+(?:uma\s+)?(?:piada|curiosidade|hist[óo]ria|sobre)|"
+        r"qual\s+(?:[éea\s]+)?(?:sua\s+)?opini[ãa]o|o\s+que\s+voc[êe]\s+acha|"
+        r"me\s+fal[ae]|fal[ae]\s+sobre|conte\s+sobre|por\s+que|porque|por\s+qual\s+motivo|"
+        r"quem\s+[ée]|quem\s+foi|me\s+recomend\w*|tem\s+alguma\s+dica|me\s+d[áa]\s+uma\s+dica|"
+        r"você\s+pode\s+me\s+explicar|voc[êe]\s+pode\s+me\s+explicar)\b",
+        re.IGNORECASE,
+    )
+
+    # Pedido claro de criação de projeto de software: só precisa da
+    # ferramenta create_project (não de clima, mídia, câmbio etc.).
+    _PROJECT_CREATION_RE = re.compile(
+        r"\b(?:crie|criar|cria|fa[çc]a|fazer|gera|gerar|gere)\s+(?:um\s+|uma\s+|me\s+um\s+)?"
+        r"(?:site|sistema|app|aplicativo|projeto|p[áa]gina|landing|dashboard|jogo)\b",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def _is_pure_explanatory_query(cls, text):
+        return bool(cls._PURE_EXPLANATORY_RE.match(str(text or "")))
+
+    @classmethod
+    def _is_project_creation_request(cls, text):
+        return bool(cls._PROJECT_CREATION_RE.search(str(text or "")))
+
     def _stream_model_response(self, messages, image=None):
         structured_stream = getattr(self.ai, "chat_stream_with_tools", None)
         if callable(structured_stream):
+            first_user = next(
+                (
+                    m.get("content", "") for m in messages
+                    if isinstance(m, dict) and m.get("role") == "user"
+                ),
+                "",
+            )
+            if image is None and self._is_pure_explanatory_query(first_user):
+                # Sem ferramentas: resposta conversacional pura, direto via chat_stream.
+                return self.ai.chat_stream(
+                    messages,
+                    include_screen=False,
+                    include_image=image,
+                )
+            if image is None and self._is_project_creation_request(first_user):
+                # Apenas a ferramenta create_project é relevante aqui.
+                filtered_tools = [
+                    t for t in self.tool_manager.list_tools()
+                    if getattr(t, "name", "") == "create_project"
+                ]
+                if filtered_tools:
+                    return structured_stream(
+                        messages,
+                        filtered_tools,
+                        self._execute_registered_tool_call,
+                        num_predict=MAX_TOOL_OUTPUT_TOKENS,
+                        include_screen=False,
+                        include_image=image,
+                    )
             return structured_stream(
                 messages,
                 self.tool_manager.list_tools(),
@@ -773,7 +961,7 @@ class VegaBrain:
         # Conteúdo necessário para decidir se uma fala curta pertence à conversa
         # anterior. É calculado aqui uma única vez, antes da fala atual ser salva.
         if not normalized and image is None:
-            yield "Estou ouvindo."
+            yield varied_listening()
 
             return
 
@@ -790,11 +978,20 @@ class VegaBrain:
         if mode_is_generated() and (short_acknowledgement or self._is_short_nonsense(normalized)):
             allow_contextual_short_reply = bool(self.conversation.get_messages())
         if short_acknowledgement and not allow_contextual_short_reply:
-            yield "Estou ouvindo."
+            yield varied_listening()
+            return
+        # ======================================================
+        # SMALL TALK LOCAL (portão de 0ms): saudação/agradecimento puro
+        # responde sem rede, sem prompt, sem token. Antes, "bom dia" e
+        # "obrigado vega" atravessavam TODOS os portões e caíam no Gemini
+        # na nuvem — 3 a 5s de espera por um cumprimento.
+        # ======================================================
+        if image is None and not allow_contextual_short_reply and is_small_talk(normalized):
+            yield varied_small_talk(normalized)
             return
         if self._is_short_nonsense(normalized) and image is None:
             if not allow_contextual_short_reply:
-                yield "Estou ouvindo."
+                yield varied_listening()
                 return
 
         # ======================================================
@@ -808,6 +1005,24 @@ class VegaBrain:
         pending_answer = self._answer_pending_question(normalized)
         if pending_answer is not None:
             yield pending_answer
+            return
+
+        capability_response = self._answer_capability_question(normalized)
+        if capability_response is not None:
+            yield capability_response
+            return
+
+        # ======================================================
+        # OLHO NA TELA — visão contínua com avisos por voz
+        # ======================================================
+
+        watch_stop = self._stop_continuous_vision(normalized)
+        if watch_stop is not None:
+            yield watch_stop
+            return
+        watch_start = self._maybe_start_continuous_vision(normalized)
+        if watch_start is not None:
+            yield watch_start
             return
 
         # PORTÃO ÚNICO DE SEGURANÇA (mesmo do fluxo de comandos).
@@ -898,6 +1113,13 @@ class VegaBrain:
 
             return
 
+        # "Deleta/apaga as memórias diárias": zera o histórico conversacional
+        # de TODOS os dias, mas NUNCA toca na memória permanente (o que o
+        # usuário ensinou — identidade, preferências, fatos — fica intacto).
+        if self._is_daily_memory_wipe_request(normalized):
+            yield self._wipe_daily_memories(normalized)
+            return
+
         scheduler_response = self._process_scheduler_request(normalized)
         if scheduler_response is not None:
             yield scheduler_response
@@ -954,11 +1176,27 @@ class VegaBrain:
             yield narrated
             return
 
+        # MULTI-INTENÇÃO (mesmo caminho do process não-stream): várias ações
+        # numa única fala antes do comando único.
+        multi_response = self._process_multi_intent(normalized)
+        if multi_response is not None:
+            self.orchestrator.complete_task()
+            self._record_local_turn(text, multi_response, kind="command")
+            yield multi_response
+            return
+
         command_response = self._process_command(
             normalized
         )
 
         if command_response is not None:
+            # MULTI-ETAPA: pedido composto ("toca rock e depois me fala que
+            # horas sao"). O comando resolve a ação principal; se sobrou uma
+            # pergunta de hora/data no final da fala, a resposta dela é
+            # anexada — o usuário recebe as DUAS coisas que pediu.
+            trailing_time = extract_trailing_time_date_question(normalized)
+            if trailing_time:
+                command_response = f"{command_response} {trailing_time}"
             # A intenção e a ação permanecem locais; só a fala que narra o
             # resultado verificado pode ser gerada pelo modelo.
             self.orchestrator.complete_task()
@@ -1040,6 +1278,19 @@ class VegaBrain:
         self.orchestrator.handle_turn_intent(normalized)
 
         # ======================================================
+        # FEEDBACK ANTECIPADO: criação de projeto de software.
+        # Abre o editor IMEDIATAMENTE e avisa por voz, enquanto a
+        # geração dos arquivos acontece na sequência (o usuário não
+        # fica em silêncio 8-16s achando que a VEGA travou).
+        # ======================================================
+        if intent == "new" and self._is_project_creation_request(normalized) and re.search(r"\bvs\s?code\b|\bvscode\b", normalized):
+            try:
+                self.commands.open_app("vscode")
+            except Exception:
+                pass
+            yield "Abrindo o VS Code e estruturando o projeto. Já te aviso quando estiver pronto."
+
+        # ======================================================
         # MEMÓRIA / IA
         # ======================================================
 
@@ -1085,6 +1336,13 @@ class VegaBrain:
 
         full_response = full_response.strip()
 
+        # MARCADORES VISUAIS: o modelo marca no texto onde a imagem deve
+        # aparecer; os marcadores são removidos da resposta final (o histórico,
+        # a conversa e a UI não devem exibir "[visual: ...]"). A fala já sai
+        # limpa no vega.py (strip_marker por frase); aqui é a limpeza oficial
+        # do texto que PERSISTE.
+        full_response = strip_marker(full_response)
+
         if not full_response:
             SESSION_METRICS.record_turn(trace)
             return
@@ -1128,7 +1386,17 @@ class VegaBrain:
 
         memory_context = self.memory.build_memory_context(text)
         relevant_memories = self.memory.retrieve_relevant(text, limit=4)
-        contextual_memories = self.memory.contextual_recall(text, limit=4)
+        # A LEITURA de memórias relevantes acima (retrieve_relevant) varre os
+        # MESMOS arquivos que o contextual_recall varreria de novo. Passamos
+        # os itens já ranqueados para reuso: metade das varreduras de memória
+        # do turno, mesma informação no prompt. Stubs de teste que não aceitam
+        # o parâmetro continuam funcionando com a chamada antiga.
+        try:
+            contextual_memories = self.memory.contextual_recall(
+                text, limit=4, precomputed=relevant_memories
+            )
+        except TypeError:
+            contextual_memories = self.memory.contextual_recall(text, limit=4)
         context_summary = self.conversation.context.snapshot()
 
         if memory_context or relevant_memories:
@@ -1172,6 +1440,17 @@ class VegaBrain:
             messages.insert(0, {
                 "role": "system",
                 "content": receipt_context,
+            })
+
+        # ESTADO DA INTERFACE (o que a VEGA tem aberto na tela): players de
+        # vídeo/música com o conteúdo deles. É o que permite a IA entender
+        # "tira isso" logo depois de "vamos assistir felipe neto" — ela SABE
+        # o que ela mesma colocou lá. Vem por último, junto do recibo.
+        interface_context = self._interface_context()
+        if interface_context:
+            messages.insert(0, {
+                "role": "system",
+                "content": interface_context,
             })
 
         # Conhecimento ingerido (PDF, páginas, transcrições). Vem antes das
@@ -1305,58 +1584,24 @@ class VegaBrain:
             )
 
         # ------------------------------------------------------
-        # DESATIVAR / VOLTAR AO TEXTO
-        # ------------------------------------------------------
-
-        disable_live_words = (
-            "desativa o modo live",
-            "desativar o modo live",
-            "desliga o modo live",
-            "desligar o modo live",
-            "desativa live",
-            "desligar live",
-            "volta ao modo texto",
-            "volta para o texto",
-            "voltar para texto",
-            "modo texto",
-        )
-
-        if self._contains_any(
-            text,
-            disable_live_words
-        ):
-
-            return VegaModes.disable_live()
-
-        # ------------------------------------------------------
-        # ATIVAR MODO LIVE
+        # MODO LIVE — REMOVIDO
+        # A VEGA conversa fluida pelo pipeline normal (turno a turno,
+        # streaming), sem depender do Gemini Live.
         # ------------------------------------------------------
 
         live_words = (
-            "ativa o modo live",
-            "ativar o modo live",
-            "ligar o modo live",
-            "liga o modo live",
-            "ativa live",
-            "ativar live",
-            "ligar live",
             "modo live",
-            "modo live mode",
             "modo em tempo real",
             "modo realtime",
-            "modo em vivo",
-            "live",
-            "realtime",
-            "tempo real",
         )
 
         if self._contains_any(
             text,
             live_words
         ):
-
-            return VegaModes.live(
-                self.commands
+            return (
+                "O modo Live foi removido. Converso normalmente pelo modo "
+                "padrão — continua rápido e fluido."
             )
 
         return None
@@ -1368,11 +1613,259 @@ class VegaBrain:
     @staticmethod
     def _remove_vega_prefix(text):
         return remove_vega_prefix(text)
+    # Ferramentas de documento estruturado que passam pelo TaskRunner
+    # (execução com validação de artefato real + registro em data/task_runs).
+    _TASK_TOOLS = frozenset({
+        "create_resume_docx", "create_document_docx",
+        "create_spreadsheet_xlsx", "create_presentation_pptx",
+    })
+
+    def _confirm_high_risk_step(self, question: str) -> bool:
+        """Gate de etapas de risco alto do TaskRunner.
+
+        Usa o MESMO mecanismo de ações destrutivas existentes: marca a
+        pergunta como ação perigosa pendente e devolve False — o TaskRunner
+        para a etapa (status "stopped") e a VEGA pergunta ao usuário. Quando
+        o usuário confirma na fala seguinte, o fluxo de confirmação existente
+        do brain resolve a pendência (PIN + auditoria) antes de retomar.
+        """
+        self._pending_dangerous_action = {
+            "question": question,
+            "kind": "task_step",
+            "asked_at": __import__("time").time(),
+        }
+        return False
+
+    def _run_task_goal(self, text: str, tool):
+        """Executa um objetivo de documento via TaskRunner (com validação).
+
+        Reusa _build_tool_parameters: se a estrutura necessária (sections/
+        slides/rows) não veio da fala, devolve None para a IA montar — mesmo
+        contrato do caminho antigo, agora com validação de arquivo e registro.
+        """
+        params = self._build_tool_parameters(text, tool)
+        if "request" in params:
+            return None  # estrutura complexa → quem monta é a IA
+        # Campos estruturados obrigatórios não extraíveis por regex.
+        if tool.name == "create_resume_docx" and not params.get("sections"):
+            return None
+        if tool.name == "create_presentation_pptx" and not params.get("slides"):
+            return None
+        if tool.name == "create_spreadsheet_xlsx" and not params.get("headers"):
+            return None
+
+        from core.brain.task_runner import TaskRunner
+        runner = TaskRunner(
+            self.tool_manager,
+            memory=getattr(self, "memory", None),
+            # Gate de segurança real: etapas de risco alto passam pelo
+            # authorize_dangerous_action (PIN + registro de auditoria).
+            on_confirm=self._confirm_high_risk_step,
+        )
+        callback = getattr(self, "tool_result_callback", None)
+        if callable(callback):
+            try:
+                callback("__moon__", ("activate", ["Execução"]))
+            except Exception:
+                pass
+        try:
+            result = runner.run(text, plan=[{"tool": tool.name, "params": params}])
+        finally:
+            if callable(callback):
+                try:
+                    callback("__moon__", ("deactivate", ["Execução"]))
+                except Exception:
+                    pass
+        # Narrar como resultado de ferramenta (mesma voz do caminho antigo).
+        if result["status"] == "completed":
+            artifact_path = next(
+                (s.get("validation", {}).get("path") or "" for s in result["steps"]
+                 if s.get("validation", {}).get("valid")), "")
+            # "status": "created" é OBRIGATÓRIO: sem ele, _format_tool_result
+            # não reconhece o arquivo como criado e NUNCA abre para o usuário
+            # (era exatamente o relato do Endriw: "criei o currículo" sem
+            # abrir nada nem dizer onde está).
+            response = self._format_tool_result(tool, {
+                "ok": True, "status": "created",
+                **({"path": artifact_path} if artifact_path else {}),
+            })
+            if not response.strip():
+                response = result["summary"]
+        else:
+            response = self._format_tool_result(tool, {
+                "ok": False, "error": result.get("summary", "falha na execução"),
+            })
+        self._store_tool_receipt(tool.name, result, user_question=text)
+        return response
+
+    # Referências naturais de arquivo que devem ser resolvidas para caminhos
+    # reais antes do plano composto: "arquivo teste.txt", "na raiz do pc",
+    # "meus downloads", "na área de trabalho".
+    _NATURAL_FILE_RE = re.compile(
+        r"\b(?:(?:o|a|do|da|meu|minha|um|uma)\s+)?arquivo\s+(?P<name>[\w\-. ]+?\.[a-zA-Z0-9]{2,4})"
+        r"|(?P<folder>na raiz do (?:pc|computador|disco c|disco)|meus? downloads?|minhas? imagens?|"
+        r"meus? documentos?|na (?:minha )?(?:área de trabalho|area de trabalho|mesa)|no desktop)",
+        re.IGNORECASE)
+
+    def _resolve_natural_files(self, text: str) -> str:
+        """Converte referências naturais de arquivo em caminhos reais.
+
+        "olha o arquivo na raiz do pc chamado dados.csv" -> "C:\\dados.csv";
+        "olha meus downloads e crie... teste.txt" -> caminho real em Downloads.
+        Usa FileSecurity.find_files (busca fuzzy já existente). Sem
+        substituição quando nada é encontrado — a fala segue intacta.
+        """
+        from core.security.file_security import FileSecurity
+
+        folder_match = self._NATURAL_FILE_RE.search(text)
+        folder = ""
+        if folder_match and folder_match.group("folder"):
+            folder_raw = folder_match.group("folder").lower()
+            if "raiz" in folder_raw:
+                folder = ""  # raiz do C: — busca em todas as roots
+            elif "download" in folder_raw:
+                folder = "downloads"
+            elif "imagem" in folder_raw:
+                folder = "imagens"
+            elif "documento" in folder_raw:
+                folder = "documentos"
+            elif "trabalho" in folder_raw or "desktop" in folder_raw or "mesa" in folder_raw:
+                folder = "desktop"
+
+        name_match = re.search(
+            r"\barquivo\s+(?:chamado\s+)?(?P<name>[\w\-. ]+?\.[a-zA-Z0-9]{2,4})", text, re.IGNORECASE)
+        if not name_match:
+            return text
+        name = name_match.group("name").strip()
+        matches = FileSecurity.find_files(name, folder=folder) if folder else FileSecurity.find_files(name)
+        if not matches:
+            return text
+        resolved = str(matches[0])
+        # Substitui a frase toda por apenas o caminho real.
+        replacement = f"o arquivo {resolved}"
+        new_text = text[:name_match.start()] + replacement + text[name_match.end():]
+        return new_text
+
+    # Conectivos que separam etapas de um objetivo composto. O verbo da
+    # ação seguinte (gere/crie/faça) é CAPTURADO e reinjetado na parte,
+    # porque "leia X e gere um relatório" sem o verbo viraria "um relatório".
+    _COMPOSITE_SPLIT = re.compile(
+        r"\s*(?:e\s+)?(?=(?:depois|ent[ãa]o|em seguida|gere|crie|criar|fa[çc]a|monte|prepare)\b)",
+        re.IGNORECASE)
+
+    def _composite_plan(self, text: str):
+        """Detecta objetivo composto ("leia X e gere um relatório").
+
+        Divide a fala nos conectivos e exige que CADA parte resolva uma
+        ferramenta real. Sem pelo menos 2 etapas válidas, devolve None — a
+        fala segue pelo fluxo normal de ferramenta única.
+        """
+        parts = [p.strip() for p in self._COMPOSITE_SPLIT.split(text) if p.strip()]
+        if len(parts) < 2:
+            return None
+        steps = []
+        for part in parts:
+            tool = self.tool_manager.resolve_for_text(part)
+            if re.search(r"\bleia\b", part, re.IGNORECASE) and re.search(r"\w+\.csv", part, re.IGNORECASE) \
+                    and self.tool_manager.get_tool("read_spreadsheet"):
+                # "leia <arquivo>.csv" — leitura estruturada (linhas), não preview.
+                tool = self.tool_manager.get_tool("read_spreadsheet")
+            elif tool is None and re.search(r"\bleia\b", part, re.IGNORECASE) \
+                    and re.search(r"\w+\.(?:pdf|txt|md|json|docx)", part, re.IGNORECASE):
+                tool = self.tool_manager.get_tool("summarize_document")
+            if tool is None or (tool.name not in self._TASK_TOOLS
+                                and tool.name not in {"summarize_document", "read_spreadsheet", "read_file"}):
+                return None  # parte não resolvida → não é plano composto válido
+            steps.append({"tool": tool.name, "part": part})
+        return steps
+
+    def _run_composite_plan(self, text: str, steps):
+        """Executa objetivo composto: cada etapa alimenta a seguinte via {prev}."""
+        plan = []
+        for step in steps:
+            part_tool = self.tool_manager.get_tool(step["tool"])
+            params = self._build_tool_parameters(step["part"], part_tool)
+            if "request" in params:
+                final_file_tool = step["tool"] in {"create_document_docx", "create_presentation_pptx", "create_spreadsheet_xlsx"}
+                if not final_file_tool or step is not steps[-1]:
+                    return None  # estrutura complexa em etapa não-final → IA
+                # Etapa final de arquivo: estrutura vem do pedido + {prev}.
+                if step["tool"] == "create_document_docx":
+                    params = {"title": "Relatório", "content": "{prev}"}
+                elif step["tool"] == "create_presentation_pptx":
+                    params = {"title": "Apresentação", "slides": "{prev}"}
+                else:  # create_spreadsheet_xlsx — CSV lido fornece headers E rows via {prev}
+                    params = {"title": "Planilha", "headers": "{prev}", "rows": "{prev}"}
+            if step["tool"] == "create_document_docx" and not params.get("content"):
+                # Etapa final: o conteúdo vem da etapa anterior via {prev}.
+                params["content"] = "{prev}"
+                params["title"] = params.get("title") or "Relatório"
+            if step["tool"] == "create_spreadsheet_xlsx" and "{prev}" not in str(params.get("headers", "")) and not params.get("rows"):
+                # Dados da etapa anterior alimentam a planilha via {prev}.
+                params["rows"] = "{prev}"
+            plan.append({"tool": step["tool"], "params": params})
+        if len(plan) < 2:
+            return None
+
+        from core.brain.task_runner import TaskRunner
+        runner = TaskRunner(
+            self.tool_manager,
+            memory=getattr(self, "memory", None),
+            on_confirm=self._confirm_high_risk_step,
+        )
+        callback = getattr(self, "tool_result_callback", None)
+        if callable(callback):
+            try:
+                callback("__moon__", ("activate", ["Execução"]))
+            except Exception:
+                pass
+        try:
+            result = runner.run(text, plan=plan)
+        finally:
+            if callable(callback):
+                try:
+                    callback("__moon__", ("deactivate", ["Execução"]))
+                except Exception:
+                    pass
+        if result["status"] != "completed":
+            return f"Não consegui concluir todas as etapas: {result.get('summary', '')}"
+        artifact_path = next(
+            (s.get("validation", {}).get("path") or "" for s in result["steps"]
+             if s.get("validation", {}).get("valid")), "")
+        final_tool = self.tool_manager.get_tool(plan[-1]["tool"])
+        # "status": "created" é OBRIGATÓRIO: sem ele o arquivo não é
+        # reconhecido como criado e nunca é aberto (mesmo bug do currículo).
+        response = self._format_tool_result(final_tool, {
+            "ok": True, "status": "created",
+            **({"path": artifact_path} if artifact_path else {}),
+        })
+        self._store_tool_receipt(plan[-1]["tool"], result, user_question=text)
+        return response
+
     def _process_tool_request(self, text):
         """Resolve e executa uma ferramenta externa quando o pedido tiver contexto adequado."""
+        # Referências naturais de arquivo ("meus downloads", "na raiz do pc
+        # chamado X") viram caminhos reais antes de qualquer roteamento.
+        text = self._resolve_natural_files(text)
+        # PERGUNTA SOBRE MEMÓRIA: "onde fica a chave do sofrimento?" era roteada
+        # para geocoding (a VEGA tentava geolocalizar um objeto da casa — bug
+        # real). Se o assunto da pergunta casa com uma memória guardada
+        # ("lembre que a chave fica na caixa"), a memória responde ANTES de
+        # qualquer ferramenta externa.
+        memory_answer = self._answer_from_memory(text)
+        if memory_answer is not None:
+            return memory_answer
+        # Planos compostos ("leia X e gere um relatório") vão primeiro para o
+        # TaskRunner, que divide em etapas encadeadas com passagem de resultado.
+        composite = self._composite_plan(text)
+        if composite:
+            return self._run_composite_plan(text, composite)
         tool = self.tool_manager.resolve_for_text(text)
         if tool is None or tool.implementation is None:
             return None
+        # Objetivos de documento vão pelo TaskRunner (validação de artefato).
+        if tool.name in self._TASK_TOOLS:
+            return self._run_task_goal(text, tool)
         try:
             params = self._build_tool_parameters(text, tool)
             # Ferramentas que exigem ESTRUTURA (listas de slides, linhas de
@@ -1384,7 +1877,27 @@ class VegaBrain:
             # required positional arguments: 'title' and 'rows'").
             if "request" in params:
                 return None
+            # Acende a lua Execução enquanto a ferramenta roda (igual ao
+            # caminho do modelo em _execute_registered_tool_call — sem isso,
+            # pedidos diretos tipo "cotação do dólar" nunca acendiam a lua).
+            callback = getattr(self, "tool_result_callback", None)
+            if callable(callback):
+                try:
+                    callback("__moon__", ("activate", ["Execução"]))
+                except Exception:
+                    pass
+            # Ferramentas visuais (busca real na internet e geração por IA)
+            # rodam em DAEMON THREAD: a fala NUNCA espera a rede, o resultado
+            # chega na galeria via callback. Um único critério, sem ifs.
+            if tool.name in {"image_search", "image_generation"}:
+                params["background"] = True
             result = tool.implementation(**params)
+            # Apaga a lua Execução com fade (a ferramenta terminou).
+            if callable(self.tool_result_callback):
+                try:
+                    self.tool_result_callback("__moon__", ("deactivate", ["Execução"]))
+                except Exception:
+                    pass
             if tool.name == "report":
                 self.memory.add_report_event(result)
             if callable(self.tool_result_callback):
@@ -1396,6 +1909,12 @@ class VegaBrain:
             # Recibo estruturado do dado obtido: é o que permite a IA responder
             # "e por que isso?" no turno seguinte sem depender do modo cognitivo.
             self._store_tool_receipt(tool.name, result, user_question=text)
+            # Notícias: fotos DO SITE de cada manchete (og:image do artigo) em
+            # background — a fala não espera a rede.
+            if tool.name == "news" and isinstance(result, dict):
+                news_items = result.get("items") or result.get("headlines") or []
+                if news_items:
+                    self._trigger_news_images(news_items, query_label="fotos das notícias de hoje")
             # Guarde respostas de ferramentas no histórico conversacional: perguntas
             # seguintes podem se referir à consulta recém-executada.
             if hasattr(self, "conversation") and hasattr(self, "orchestrator"):
@@ -1414,7 +1933,18 @@ class VegaBrain:
             return response
         except Exception as error:
             print(f"[VegaTools] Erro na ferramenta {tool.name}: {error}")
-            return f"Não consegui usar a ferramenta {tool.name} agora: {error}"
+            # O usuário não sabe o que é "ferramenta geocoding" — mensagem interna
+            # vazava o nome técnico e o erro bruto da API na fala (bug real: "onde
+            # fica a chave do sofrimento?" respondia "Não consegui usar a
+            # ferramenta geocoding agora: Nenhum resultado encontrado...").
+            tool_label = self._TOOL_FRIENDLY_LABELS.get(tool.name, "")
+            message = str(error)
+            if "Nenhum resultado encontrado" in message or "não encontrad" in message.lower():
+                base = f"Não encontrei nenhum lugar chamado '{message.rsplit("'", 1)[-2] if "'" in message else ''}'." if tool.name == "geocoding" else "Não encontrei nada sobre isso."
+                return f"{base} Se for um lugar de verdade, posso procurar a cidade ou endereço — me diz qual."
+            if tool_label:
+                return f"Não consegui consultar {tool_label} agora. Tente de novo em instantes."
+            return "Não consegui fazer essa consulta agora. Tente de novo em instantes."
 
     # ==========================================================
     # RECIBO DE FERRAMENTA (dado verificado para o próximo turno)
@@ -1519,7 +2049,17 @@ class VegaBrain:
             return None
 
         try:
-            return pending["handler"](answer)
+            # O texto original vai junto: o handler pode ter um PEDIDO EXTRA
+            # na mesma frase ("quero, e pausa a música") — o sim confirma,
+            # mas o comando citado precisa chegar ao parser também.
+            return pending["handler"](answer, text)
+        except TypeError:
+            # Handler antigo (assinatura só com o booleano).
+            try:
+                return pending["handler"](answer)
+            except Exception as error:
+                print(f"[VEGA Pergunta] Falha ao responder: {error}")
+                return None
         except Exception as error:
             print(f"[VEGA Pergunta] Falha ao responder: {error}")
             return None
@@ -1584,6 +2124,64 @@ class VegaBrain:
             return None
         return result
 
+    # --------------------------------------------------------------
+    # VISUAL DAS NOTÍCIAS: fotos DO SITE de cada manchete lida
+    # --------------------------------------------------------------
+
+    def _trigger_news_images(self, items, *, query_label: str = ""):
+        """Fotos REAIS da página de cada notícia que a VEGA está lendo.
+
+        NÃO é busca genérica por tema (image_search): é a FOTO DO ARTIGO —
+        og:image da página que o próprio portal declara. "Acidente de moto
+        em SP" mostra a foto real do acidente, não uma moto qualquer.
+
+        Roda em daemon thread (a fala NUNCA espera a rede). Quando pronto,
+        entra pelo MESMO canal da linguagem visual (set_update_callback ->
+        image_result_updated) e aparece na galeria/aba Imagens.
+        Falha é silenciosa: a leitura segue sem foto.
+        """
+        items = [item for item in (items or []) if isinstance(item, dict)]
+        if not any(str(item.get("link") or "").strip() for item in items):
+            return
+
+        def worker():
+            try:
+                from tools.news_image_extractor import shared_news_extractor
+                from tools.image_tools import record_last_images, get_last_images, set_update_callback
+
+                extractor = shared_news_extractor()
+                images = extractor.fetch_for_items(items)
+                if not images:
+                    return
+                result = {
+                    "paths": [img["path"] for img in images],
+                    "path": images[0]["path"],
+                    "query": query_label or "fotos das notícias de hoje",
+                    "images": images,
+                    "source": images[0].get("source", ""),
+                    "pending": False,
+                }
+                record_last_images(result)
+                callback = getattr(self, "news_images_callback", None)
+                if callable(callback):
+                    try:
+                        callback(result)
+                        return
+                    except Exception:
+                        pass
+                # Fallback: canal global da linguagem visual.
+                from tools import image_tools as _it
+                callback = getattr(_it, "_update_callback", None)
+                if callable(callback):
+                    try:
+                        callback(result)
+                    except Exception:
+                        pass
+            except Exception as error:
+                print(f"[VEGA Notícias] Falha ao buscar fotos dos sites: {error}")
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _store_tool_receipt(self, tool_name, result, user_question=""):
         """Guarda o dado concreto obtido por uma ferramenta.
 
@@ -1591,6 +2189,10 @@ class VegaBrain:
         fica no histórico como fala da VEGA, e o prompt proíbe o modelo de tratar
         fala da VEGA como fato. O recibo é dado de API com origem explícita, então
         entra no contexto sem esse conflito.
+
+        História curta: os últimos recibos continuam disponíveis — perguntas
+        de acompanhamento se referem ao que a VEGA disse AINDA antes, não só
+        ao último turno ("e a cotação de ontem?" depois de um clima).
         """
         try:
             receipt = build_receipt(tool_name, result, user_question=user_question)
@@ -1599,6 +2201,27 @@ class VegaBrain:
             return None
         if receipt is not None:
             self.last_tool_receipt = receipt
+            history = getattr(self, "tool_receipt_history", None)
+            if history is None:
+                history = []
+                self.tool_receipt_history = history
+            # Dedup pelo assunto: a MESMA ferramenta sobre o MESMO assunto
+            # atualiza o recibo existente em qualquer posição — "dólar" →
+            # "clima" → "dólar de novo" substitui o valor, não empilha duas
+            # cotatções (o antecedente da conversa continua único e correto).
+            existing = next(
+                (
+                    index
+                    for index, old in enumerate(history)
+                    if old.tool == receipt.tool and old.topic == receipt.topic
+                ),
+                None,
+            )
+            if existing is not None:
+                history[existing] = receipt
+            else:
+                history.append(receipt)
+            del history[:-3]  # só os 3 mais recentes interessam
             # Dá ao orquestrador um antecedente concreto para "e por que isso?".
             orchestrator = getattr(self, "orchestrator", None)
             note = getattr(orchestrator, "note_tool_receipt", None)
@@ -1610,17 +2233,79 @@ class VegaBrain:
         return receipt
 
     def _tool_receipt_context(self):
-        """Bloco de sistema com o último dado verificado (vazio se esfriou)."""
-        receipt = getattr(self, "last_tool_receipt", None)
-        if receipt is None:
+        """Bloco de sistema com os dados verificados recentes (vazio se esfriou)."""
+        blocks = []
+        history = getattr(self, "tool_receipt_history", None) or []
+        if history:
+            blocks = [b for b in (
+                receipt.to_context_block() for receipt in history
+            ) if b]
+        else:
+            receipt = getattr(self, "last_tool_receipt", None)
+            if receipt is not None:
+                try:
+                    block = receipt.to_context_block()
+                    if block:
+                        blocks.append(block)
+                except Exception:
+                    pass
+        if not blocks:
             return ""
+        # O mais recente por último: fica colado ao final do prompt, mais
+        # perto da fala atual, que é o antecedente provável.
+        return "\n\n".join(blocks)
+
+    def _interface_context(self):
+        """Bloco de sistema com o ESTADO da interface da VEGA.
+
+        Lista o que está aberto na tela: TODOS os cards/abas (clima, cotação,
+        notícias, fotos, players de vídeo/música com o conteúdo). É o que
+        permite referências contextuais funcionarem em QUALQUER ferramenta:
+        "fecha o card de clima" e "tira isso" precisam que a VEGA lembre do
+        que ELA mesma colocou lá — sem isto, a IA nunca sabe o que está na
+        interface e não consegue controlar o que mostra.
+        """
+        lines = []
         try:
-            return receipt.to_context_block()
+            workspace = getattr(self, "card_workspace", None)
+            describe = getattr(workspace, "state", None) and workspace.state.describe()
+            if describe:
+                lines.extend(describe)
         except Exception:
+            pass
+
+        # Players internos (YouTube/Spotify) ficam fora do card_workspace:
+        # entram aqui para a IA saber o que está tocando/aberto também.
+        try:
+            open_players = self.commands._open_players()
+        except Exception:
+            open_players = {}
+        label = {"video": "vídeo", "music": "música"}
+        for kind, info in open_players.items():
+            query = str(info.get("query") or "").strip()
+            if query:
+                lines.append(f"player de {label.get(kind, kind)}: {query}")
+
+        if not lines:
             return ""
+        header = ["O QUE A VEGA TEM ABERTO NA INTERFACE AGORA (ela mesma colocou):"]
+        header.extend(f"- {line}" for line in lines)
+        header.append(
+            "- Quando a pessoa se referir a isso ('tira isso', 'fecha o card de "
+            "clima', 'tira o felipe neto'), ela quer remover/controlar EXATAMENTE "
+            "o que está listado acima — não pergunte o que é."
+        )
+        return "\n".join(header)
 
     def _execute_registered_tool_call(self, name, arguments):
         """Execute only a registered tool with the model-provided arguments."""
+        # Acende a lua Execução enquanto uma ferramenta roda (fade ao fim).
+        callback = getattr(self, "tool_result_callback", None)
+        if callable(callback):
+            try:
+                callback("__moon__", ("activate", ["Execução"]))
+            except Exception:
+                pass
         spec = self.tool_manager.get_tool(name)
         if spec is None or not callable(spec.implementation):
             return {"error": "Ferramenta não registrada ou sem implementação."}
@@ -1641,6 +2326,11 @@ class VegaBrain:
                     arguments.get("shapes"),
                     canvas_callback=self.canvas_callback,
                 )
+            elif spec.name in {"image_search", "image_generation"}:
+                # Ferramentas visuais NÃO bloqueiam a fala: rodem em
+                # background (daemon thread) e a galeria se atualiza via sinal
+                # quando pronta. O modelo recebe só o recibo.
+                result = spec.implementation(**arguments, background=True)
             else:
                 result = spec.implementation(**arguments)
             if spec.name == "report":
@@ -1650,12 +2340,93 @@ class VegaBrain:
                     self.tool_result_callback(spec.name, result)
                 except Exception as error:
                     print(f"[VegaTools] Não foi possível exibir o resultado: {error}")
+            # Notícias via function-calling: mesmas fotos do site em background.
+            if spec.name == "news" and isinstance(result, dict):
+                news_items = result.get("items") or result.get("headlines") or []
+                if news_items:
+                    self._store_tool_receipt(spec.name, result)
+                    self._trigger_news_images(news_items, query_label="fotos das notícias de hoje")
+            # TODA ferramenta com dado factual deixa recibo (cotação, clima,
+            # dicionário, filme...) — sem isto, o modelo chamando a ferramenta
+            # direto perdia o dado no turno seguinte ("e por que isso?").
+            elif isinstance(result, dict) and not result.get("error"):
+                self._store_tool_receipt(spec.name, result)
             return result
         except Exception as error:
             print(f"[VegaTools] Erro na ferramenta {spec.name}: {error}")
             return {"error": f"Não consegui usar a ferramenta {spec.name}: {error}"}
 
+    # Números por extenso usados em falas de tempo ("em uma hora",
+    # "em meia hora", "em quinze minutos"). O STT quase nunca digita o dígito.
+    _WORD_NUMBERS = {
+        "uma": 1, "um": 1, "duas": 2, "dois": 2, "tres": 3, "três": 3,
+        "quatro": 4, "cinco": 5, "dez": 10, "quinze": 15, "vinte": 20,
+        "trinta": 30, "quarenta e cinco": 45, "meia": 0.5,
+    }
+
+    def _parse_duration_words(self, text):
+        """Converte "em uma hora" / "em meia hora" / "em quinze minutos".
+
+        Devolve (valor, unidade) ou None. O regex principal só aceita dígitos;
+        o STT, porém, quase sempre transcreve o número POR EXTENSO — sem isto,
+        "me lembre de ligar em uma hora" não criava lembrete nenhum.
+        """
+        match = re.search(
+            r"em\s+(meia|uma|um|duas|dois|tres|três|quatro|cinco|dez|quinze|vinte|trinta|quarenta\s+e\s+cinto|quarenta\s+e\s+cinco)\s+(hora|horas|minuto|minutos)\b",
+            text,
+        )
+        if not match:
+            return None
+        word, unit = match.group(1), match.group(2)
+        value = self._WORD_NUMBERS.get(word)
+        if value is None:
+            return None
+        if unit.startswith("hora"):
+            return value, "hora"
+        # "meia hora" = 30 minutos; "quinze minutos" = 15 minutos.
+        if value <= 1 and word == "meia":
+            return 0.5, "hora"
+        return value, "minuto"
+
+    def _parse_time_of_day(self, text):
+        """Converte "as 7 da tarde" / "as 15 horas" em (hora, minuto) 24h.
+
+        "às 7" sem qualificador = manhã (7:00); "às 7 da tarde/noite" = 19:00.
+        Devolve None se não houver hora explícita.
+        """
+        match = re.search(
+            r"(?:as|às|a[s]?|pra[s]?|para[s]?)\s+(\d{1,2})(?::(\d{2}))?\s*"
+            r"(horas?|da\s+manha|da\s+tarde|da\s+noite|h)?",
+            text,
+        )
+        if not match:
+            return None
+        hour = int(match.group(1))
+        minute = int(match.group(2) or 0)
+        qualifier = (match.group(3) or "").lower()
+        if hour < 1 or hour > 23:
+            return None
+        if "tarde" in qualifier and hour < 12:
+            hour += 12
+        elif "noite" in qualifier and hour < 12:
+            hour += 12
+        return hour, minute
+
     def _process_scheduler_request(self, text):
+        # LEMBRETE SEM PRAZO nenhum: "me lembre de comprar pão", "lembrete de
+        # pagar o boleto". Antes só existia caminho com "em N minutos"/hora —
+        # sem prazo a fala caia fora e ia para a IA, que não criava nada
+        # (BUG REAL da bateria de áreas, 26/10/2026).
+        simple = re.search(
+            r"^(?:me\s+|meu\s+)?(?:lembrete|lembre|lembra|lembrem)(?:-me|\s+me)?\s+(?:de|que|para|pra)\s+(.+?)\s*$",
+            text, re.IGNORECASE,
+        )
+        if simple:
+            task = simple.group(1).strip()
+            if task and not re.search(r"\b(?:em|as|às|pras|para as|para as)\s", task + " "):
+                item = self.scheduler.add_in(task, 1.0)
+                return f"Lembrete criado: {task}. Te aviso em breve."
+
         match = re.search(r"(?:lembre|lembra)(?:-me| me)?(?: que)? (.+?) em (\d+(?:\.\d+)?) (minutos?|horas?)$", text)
         if match:
             task = match.group(1).strip()
@@ -1663,6 +2434,46 @@ class VegaBrain:
             minutes = amount * (60 if match.group(3).startswith("hora") else 1)
             item = self.scheduler.add_in(task, minutes)
             return f"Lembrete criado para daqui a {amount:g} {match.group(3)}: {task}."
+
+        # Número POR EXTENSO: "me lembre de ligar em uma hora",
+        # "me lembre de tomar remédio em meia hora".
+        if match is None:
+            words = self._parse_duration_words(text)
+            if words:
+                value, unit = words
+                lead = re.search(r"(?:lembre|lembra)(?:-me| me)?(?: que| de)?\s+(.+?)\s+em\s+", text)
+                if lead:
+                    task = lead.group(1).strip()
+                    minutes = value * 60 if unit == "hora" else value
+                    # "meia hora" é 0.5h = 30 min.
+                    if value < 1:
+                        minutes = value * 60
+                    self.scheduler.add_in(task, minutes)
+                    # "meia hora" fala melhor que "0.5 horas".
+                    if value < 1:
+                        spoken = "meia hora"
+                    elif value == 1:
+                        spoken = f"1 {unit}"
+                    else:
+                        spoken = f"{value:g} {unit}s"
+                    return f"Lembrete criado para daqui a {spoken}: {task}."
+
+        # HORA DO DIA: "me lembre de ligar pra mãe as 7 da tarde".
+        tod = self._parse_time_of_day(text)
+        if tod:
+            hour, minute = tod
+            lead = re.search(r"(?:lembre|lembra)(?:-me| me)?(?: que| de)?\s+(.+?)\s+(?:as|às|a[s]?|pra[s]?|para[s]?)\s+\d", text)
+            if lead:
+                task = lead.group(1).strip()
+                target = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if target <= datetime.now():
+                    # Hora já passou hoje: agenda para amanhã (o esperado ao
+                    # pedir "as 7 da tarde" às 20h de hoje).
+                    target += timedelta(days=1)
+                item = self.scheduler.add(task, target)
+                when = target.strftime("%H:%M")
+                return f"Lembrete criado para {when}: {task}."
+
         recurring = re.search(r"(?:lembre|lembra)(?:-me| me)? (.+?) a cada (\d+(?:\.\d+)?) (minutos?|horas?)", text)
         if recurring:
             task = recurring.group(1).strip()
@@ -1775,6 +2586,11 @@ class VegaBrain:
             "organiza meu dia", "organize meu dia", "resumo do meu dia",
             "resumo do dia", "minha agenda de hoje", "o que tenho para hoje",
             "o que eu tenho hoje",
+            # Fala natural com preposição: "o que eu tenho pra hoje?" — antes
+            # só a variante "para hoje"/"hoje" casava e a pergunta escapava
+            # para a IA, que respondia a DATA em vez da agenda (bug real).
+            "o que tenho pra hoje", "o que eu tenho pra hoje",
+            "minha agenda pra hoje", "minha agenda para hoje",
         )):
             return self._daily_overview()
 
@@ -2112,6 +2928,35 @@ class VegaBrain:
         params = {}
 
         if tool.name == "weather":
+            # Mapeamento de siglas comuns para capitais e estados brasileiros
+            siglas = {
+                "sp": "São Paulo",
+                "rj": "Rio de Janeiro",
+                "bh": "Belo Horizonte",
+                "cwb": "Curitiba",
+                "poa": "Porto Alegre",
+                "bsb": "Brasília",
+                "ssa": "Salvador",
+                "rec": "Recife",
+                "for": "Fortaleza",
+                "vix": "Vitória",
+                "mg": "Belo Horizonte",
+                "pr": "Curitiba",
+                "rs": "Porto Alegre",
+                "df": "Brasília",
+                "ba": "Salvador",
+                "pe": "Recife",
+                "ce": "Fortaleza",
+                "sc": "Florianópolis",
+                "go": "Goiânia",
+            }
+            # Verifica se há sigla isolada ou após climatempo/tempo/em/de
+            sigla_city = None
+            for token, full_name in siglas.items():
+                if re.search(rf"\b{token}\b", norm_ascii):
+                    sigla_city = full_name
+                    break
+
             city = self._extract_named_entity(
                 norm_ascii,
                 [
@@ -2124,7 +2969,7 @@ class VegaBrain:
                     "joinville", "blumenau", "caxias do sul", "nova york",
                     "londres", "paris", "toquio", "tokyo", "lisboa", "buenos aires",
                 ],
-            ) or self._extract_after_keywords(norm_ascii, ["em ", "na ", "no ", "cidade de ", "cidade "])
+            ) or sigla_city or self._extract_after_keywords(norm_ascii, ["em ", "na ", "no ", "cidade de ", "cidade "])
             if city:
                 city = re.sub(r"\b(hoje|amanha|agora|nesta semana|neste fim de semana)\b", "", city).strip()
                 params["city"] = city
@@ -2233,10 +3078,67 @@ class VegaBrain:
         # ferramenta (tool call). Antes, o bloco antigo de create_document
         # injetava parâmetros errados e a ferramenta falhava com
         # "unexpected keyword argument" / "missing required arguments".
+        if tool.name == "create_resume_docx":
+            # Currículo: estrutura simples extraível da fala ("seções X e Y").
+            # Sem seções enumeradas, devolve "request" → quem monta é a IA.
+            section_match = re.search(
+                r"\b(?:se[cç][oõ]es|seções|partes)\s+(.+)$", text, re.IGNORECASE)
+            if not section_match:
+                return {"request": text}
+            raw = section_match.group(1)
+            headings = [h.strip().title() for h in re.split(r"\s+e\s+|,", raw) if h.strip()]
+            title_match = re.search(r"\bt[ií]tulo\s+([A-Z][\wÀ-ÿ]+(?:\s+[A-Z][\wÀ-ÿ]+){0,3})", text)
+            return {
+                "title": title_match.group(1) if title_match else "Currículo",
+                "sections": [{"heading": h, "text": ""} for h in headings],
+            }
+
+        if tool.name == "create_spreadsheet_xlsx":
+            # Planilha: extrai estrutura simples da fala —
+            # "planilha de vendas com colunas produto e preço" →
+            #   title=Vendas, headers=[Produto, Preço].
+            # Sem colunas enumeradas → "request" → quem monta é a IA.
+            title_match = re.search(
+                r"\bplanilha\s+(?:de|do|da|das)\s+([\wÀ-ÿ]+(?:\s+[\wÀ-ÿ]+){0,2})",
+                text, re.IGNORECASE)
+            col_match = re.search(
+                r"\b(?:colunas?|campos?)\s+(.+)$", text, re.IGNORECASE)
+            if not col_match:
+                return {"request": text}
+            headers = [h.strip().title() for h in re.split(r"\s+e\s+|,", col_match.group(1)) if h.strip()]
+            return {
+                "title": title_match.group(1).title() if title_match else "Planilha",
+                "headers": headers,
+                "rows": [],
+            }
+
+        if tool.name == "create_presentation_pptx":
+            # Apresentação: extrai título e assunto da fala —
+            # "apresentação sobre o sistema solar com 5 slides" →
+            #   title=O Sistema Solar, slides=esqueleto lógico.
+            # "slides?" cobre o SINGULAR ("faça um slide sobre política").
+            # Bullets detalhados por slide são da IA; só montamos esqueleto.
+            about = re.search(
+                r"\b(?:\w+\s+)?(?:apresenta\w*\w\w|slides?|powerpoint)\s+(?:sobre|de|do|da)\s+(.+)$",
+                text, re.IGNORECASE)
+            if not about:
+                return {"request": text}
+            subject_raw = about.group(1)
+            # "... com N slides": separa a contagem do assunto.
+            subject = re.sub(r"\s+com\s+\d+\s+slides\s*$", "", subject_raw, flags=re.IGNORECASE).strip()
+            n_slides = re.search(r"\s+com\s+(\d+)\s+slides\s*$", subject_raw, re.IGNORECASE)
+            count = max(3, min(12, int(n_slides.group(1)) if n_slides else 4))
+            # Capa é adicionada pela própria ferramenta; geramos count-1 slides
+            # de conteúdo para o total da apresentação == count.
+            slides = [
+                *[{"title": f"{subject.title()} — parte {i}", "bullets": ["Tópicos principais", "Exemplos"]}
+                  for i in range(2, count)],
+                {"title": "Conclusão", "bullets": ["Resumo dos pontos principais"]},
+            ] if count > 2 else [{"title": subject.title(), "bullets": ["Visão geral"]}]
+            return {"title": subject.title(), "slides": slides}
+
         if tool.name in {
-            "create_presentation_pptx",
             "create_document_docx",
-            "create_spreadsheet_xlsx",
             "create_mindmap_image",
             "draw_image",
         }:
@@ -2266,6 +3168,22 @@ class VegaBrain:
 
         if tool.name == "news":
             params["limit"] = 3
+            # Fonte pedida explicitamente ("notícias do G1", "le de novo as do
+            # G1"): vira busca livre no Google News filtrada por site — o
+            # pedido de repetir uma fonte NÃO é ignorado nem vira conversa.
+            source = self._extract_news_source(normalized)
+            if source:
+                params["query"] = source
+                params["topic"] = ""
+            elif self._news_repeat_requested(norm_ascii):
+                # "le dnv" / "de novo" sem citar fonte: repete a leitura
+                # geral recente — sem filtro, as mesmas fontes de sempre.
+                pass
+            else:
+                # Tema pedido ("notícias de tecnologia", "notícias de esportes")
+                topic = self._extract_news_topic(norm_ascii)
+                if topic:
+                    params["topic"] = topic
             return params
 
         if tool.name == "trending_videos":
@@ -2281,7 +3199,144 @@ class VegaBrain:
                 params["query"] = norm_ascii
             return params
 
+        # ==========================================================
+        # SPOTIFY — extrai o pedido da fala natural
+        # ==========================================================
+        if tool.name in {
+            "spotify_play", "spotify_control", "spotify_now_playing",
+            "spotify_playlists", "spotify_queue",
+        }:
+            return self._build_spotify_parameters(tool.name, norm_ascii, text)
+
+        # Geração de imagem: o prompt é o PEDIDO INTEIRO do usuário (sem
+        # inventar detalhes que ele não pediu). O modelo de IA traduz para
+        # inglês quando chama via function-calling; no caminho local (regex),
+        # o prompt cruza na língua original — o FLUX entende pt reasonably
+        # bem, mas o ideal é o caminho do modelo.
+        if tool.name == "image_generation":
+            prompt = self._extract_image_gen_prompt(norm_ascii)
+            if not prompt:
+                return {}  # sem prompt não há o que gerar — segue para a IA
+            params["prompt"] = prompt
+            return params
+
         return {}
+
+    # --------------------------------------------------------------
+    # NOTÍCIAS: fonte e tema pedidos na fala
+    # --------------------------------------------------------------
+
+    # Fontes reais citáveis: "notícias do G1", "le de novo as da CNN",
+    # "só as da BBC". Quando a pessoa nomeia a fonte, o pedido é FILTRAR
+    # por ela — não uma fala genérica para a IA.
+    _NEWS_SITES = {
+        "g1": "g1.globo.com",
+        "globo": "globo.com",
+        "cnn": "cnn.com",
+        "cnn brasil": "cnnbrasil.com.br",
+        "bbc": "bbc.co.uk",
+        "bbc brasil": "bbc.com",
+        "folha": "folha.uol.com.br",
+        "uol": "uol.com.br",
+        "estadao": "estadao.com.br",
+        "estadão": "estadao.com.br",
+        "globo esporte": "globoesporte.globo.com",
+        "ge globo": "ge.globo.com",
+        "r7": "r7.com",
+        "reuters": "reuters.com",
+        "record": "r7.com",
+        "terra": "terra.com.br",
+        "ig": "ig.com.br",
+        "band": "band.uol.com.br",
+        "correio brasileirense": "correiobraziliense.com.br",
+        "correio braziliense": "correiobraziliense.com.br",
+        "oglobo": "oglobo.globo.com",
+        "o globo": "oglobo.globo.com",
+
+        "apnews": "apnews.com",
+        "elpais": "elpais.com",
+        "el pais": "elpais.com",
+        "veja": "veja.abril.com.br",
+        "istoe": "istoe.com.br",
+        "poder360": "poder360.com.br",
+        "metropoles": "metropoles.com",
+        "gizmodo": "gizmodo.com",
+        "the verge": "theverge.com",
+        "tecmundo": "tecmundo.com.br",
+        "olhar digital": "olhardigital.com.br",
+    }
+
+    @classmethod
+    def _extract_news_source(cls, normalized: str) -> str:
+        """Fonte de notícia nomeada na fala -> filtro de site (site:).
+
+        Nomes compostos casam ANTES dos simples ("cnn brasil" vence "cnn").
+        A fonte pode vir SEM a palavra "notícia" na fala — "le de novo a do
+        G1", "e a da cnn?" (bug real do 24/10: sem a menção explícita, a
+        fonte não era extraída e o pedido virava conversa).
+        """
+        text = str(normalized or "").lower()
+        ordered = sorted(cls._NEWS_SITES.items(), key=lambda kv: -len(kv[0]))
+        for name, domain in ordered:
+            if re.search(rf"\b{re.escape(name)}\b", text):
+                return f"site:{domain} quando:1d"
+        return ""
+
+    # Contexto da última leitura: "le dnv" sem fonte citada repete a leitura
+    # GERAL — não filtra pela primeira fonte do recibo.
+    LAST_NEWS_SOURCE_TTL = 600.0  # 10 min: manchete velha não é "a notícia"
+
+    def _news_repeat_requested(self, norm_ascii: str) -> bool:
+        """Fala pede REPETIR a leitura recente? ('le dnv', 'le de novo a do g1')
+
+        Só é repetição quando há recibo de notícia fresco — sem isso,
+        'de novo' solto não vira filtro de notícia por acidente.
+        """
+        text = str(norm_ascii or "")
+        if not re.search(r"\b(?:de novo|denovo|dnv|de nv|mais uma vez|outra vez)\b", text):
+            return False
+        receipt = getattr(self, "last_tool_receipt", None)
+        return bool(receipt and getattr(receipt, "tool", "") == "news" and receipt.is_fresh())
+
+    @staticmethod
+    def _extract_news_topic(norm_ascii: str) -> str:
+        """Tema pedido em 'notícias de X' / 'notícias sobre X'."""
+        match = re.search(
+            r"\bnot[íi]cias\s+(?:de|do|da|dos|das|sobre)\s+(\S.*)$",
+            norm_ascii or "",
+        )
+        if not match:
+            return ""
+        subject = match.group(1).strip()
+        # Remove fechos de fala que não são tema ("de hoje", "agora").
+        subject = re.sub(r"\b(de\s+)?hoje\b.*$", "", subject).strip()
+        subject = re.sub(r"\b(por favor|agora|pra mim|para mim)\b", "", subject).strip()
+        return subject.strip(" ,.?")
+
+    def _extract_image_gen_prompt(self, norm_ascii: str) -> str:
+        """Tira o ASSUNTO do pedido: 'crie uma imagem de um dragão' ->
+        'um dragão'. Preserva a intenção do usuário, remove só a moldura
+        do pedido (verbo + palavra imagem/capa/ícone)."""
+        # Corta no gatilho 'imagem/capa/ícone ... de/com/sobre' e pega o resto.
+        match = re.search(
+            r"\b(?:imagem|imagens|capa|ícone|icone|arte|ilustra[çc][aã]o|cen[áa]rio|desenho)\s+(?:de|do|da|dos|das|com|sobre)\s+(.+)$",
+            norm_ascii,
+        )
+        if match:
+            prompt = match.group(1).strip(" ?!").strip()
+            # Remove coletivos de fecho que não descrevem a cena
+            # ("por favor", "pra mim", "para mim").
+            prompt = re.sub(r"\s+(?:por\s+favor|pra\s+mim|para\s+mim|pfv)\s*$", "", prompt)
+            return prompt
+        # Sem 'de/com/sobre': pedidos tipo 'gera uma capa para meu projeto'
+        # ou 'faça um ícone quadrado' — o pedido inteiro é a descrição.
+        match = re.search(
+            r"\b(?:crie?|gera|gere|fa[çc]|faz|desenhe|pinta)\s+(.+)$",
+            norm_ascii,
+        )
+        if match:
+            return match.group(1).strip(" ?!").strip()
+        return ""
 
     def _format_weather_result(self, result: dict) -> str:
         import random
@@ -2402,12 +3457,36 @@ class VegaBrain:
         return random.choice(variations).strip()
 
     _CREATED_FILE_LABELS = {
+        "create_resume_docx": "currículo",
         "create_presentation_pptx": "apresentação",
         "create_document_docx": "documento",
         "create_spreadsheet_xlsx": "planilha",
         "create_mindmap_image": "mapa mental",
         "draw_image": "desenho",
         "edit_video": "vídeo",
+    }
+
+    # Rótulos amigáveis para erros de ferramenta: a fala não expõe nomes
+    # técnicos ("ferramenta spotify_play" significa nada para o usuário).
+    _TOOL_FRIENDLY_LABELS = {
+        "geocoding": "a localização",
+        "weather": "o clima",
+        "currency": "a cotação",
+        "dictionary": "o dicionário",
+        "movie": "o filme",
+        "news": "as notícias",
+        "spotify_play": "o Spotify",
+        "spotify_control": "o Spotify",
+        "spotify_queue": "a fila do Spotify",
+        "spotify_playlists": "suas playlists",
+        "spotify_now_playing": "o que está tocando",
+        "timezone": "o fuso horário",
+        "country": "os dados do país",
+        "calendar": "a agenda",
+        "image_search": "a busca de imagens",
+        "image_generation": "a geração de imagem",
+        "youtube_search": "o YouTube",
+        "find_files": "a busca de arquivos",
     }
 
     def _announce_created_file(self, tool_name, result):
@@ -2420,10 +3499,12 @@ class VegaBrain:
 
         path = str(result.get("path") or "")
         label = self._CREATED_FILE_LABELS.get(tool_name, "arquivo")
+        # Artigo correto: "a currículo" soa errado — usa o artigo do rótulo.
+        article = "o " if label == "currículo" else "a "
         name = os.path.basename(path) if path else ""
 
         if not path or not os.path.exists(path):
-            return f"Criei a {label}, mas não consegui localizar o arquivo para abrir."
+            return f"Criei {article}{label}, mas não consegui localizar o arquivo para abrir."
 
         opened = False
         try:
@@ -2433,8 +3514,9 @@ class VegaBrain:
             print(f"[VEGA] Não consegui abrir o arquivo gerado: {error}")
 
         if opened:
-            return f"Pronto. Criei a {label} ({name}) e já abri para você."
-        return f"Criei a {label}: {name}. Ela está na sua pasta de usuário."
+            return f"Pronto. Criei {article}{label} ({name}) e já abri para você."
+        folder = os.path.dirname(path) or "sua pasta de usuário"
+        return f"Criei {article}{label}: {name}. Está em {folder}."
 
     def _format_tool_result(self, tool, result):
         if not isinstance(result, dict):
@@ -2466,7 +3548,78 @@ class VegaBrain:
             data = result.get("result", {})
             return f"{data.get('Title', result.get('title'))}: {data.get('Plot', 'resultado consultado')}"
         if tool.name == "news":
-            return "Notícias principais: " + " | ".join(item.get("title", "") for item in result.get("items", [])[:3])
+            # Narração falada: separador "|" virava um emaranhado corrido na
+            # voz. Frases com ponto dão pausa natural ao TTS.
+            items = result.get("items") or result.get("headlines") or []
+            titles = [str(item.get("title", "")).strip() for item in items[:3]]
+            titles = [t for t in titles if t]
+            if not titles:
+                return "Não consegui achar manchetes agora."
+            return "Aqui vão as principais notícias: " + ". ".join(titles) + "."
+
+        if tool.name == "image_generation":
+            if result.get("pending"):
+                return "Estou gerando a imagem — fica pronta em instantes."
+            if not result.get("ok"):
+                return f"Não consegui gerar a imagem: {result.get('error', 'erro desconhecido')}"
+            seconds = result.get("generation_seconds")
+            timing = f" em {seconds} segundos" if seconds else ""
+            return f"Imagem gerada{timing}. Está aí na tela para você ver."
+
+        if tool.name == "spotify_play":
+            status = result.get("status")
+            query = result.get("query") or ""
+            if status == "playing":
+                return f"Tocando {query} no Spotify."
+            if status == "playing_local":
+                return f"Tocando {query} no app do Spotify."
+            if status == "empty":
+                return result.get("message") or "Você não tem curtidas no Spotify."
+            if status == "not_found":
+                return f"Não encontrei {query} no Spotify."
+            if status == "resumed":
+                return "Retomando a música."
+            return "Não consegui tocar isso no Spotify agora."
+
+        if tool.name == "spotify_control":
+            status = result.get("status")
+            if status == "volume":
+                return f"Volume no {result.get('percent')} por cento."
+            if status == "paused":
+                return "Pausado."
+            if status == "resumed":
+                return "Tocando de novo."
+            if status == "skipped_next":
+                return "Próxima música."
+            if status == "skipped_previous":
+                return "Voltando."
+            if status == "shuffle":
+                return "Aleatório ativado." if result.get("state") else "Ordem normal ativada."
+            return "Feito."
+
+        if tool.name == "spotify_now_playing":
+            if not result.get("playing"):
+                return "Nada está tocando agora."
+            return f"Tocando {result.get('title')} de {result.get('artist')}."
+
+        if tool.name == "spotify_playlists":
+            playlists = result.get("playlists", [])
+            names = ", ".join(p.get("name", "") for p in playlists[:6])
+            liked_total = result.get("liked_total", 0)
+            if not playlists and not liked_total:
+                return "Você ainda não tem playlists nem curtidas no Spotify."
+            return (
+                f"Você tem {liked_total} curtidas e suas playlists são: {names}."
+            )
+
+        if tool.name == "spotify_queue":
+            if result.get("status") == "queued":
+                return f"{result.get('title')} adicionada à fila."
+            queue = result.get("queue", [])
+            if not queue:
+                return "A fila está vazia."
+            first = queue[0]
+            return f"A seguir: {first.get('title')} de {first.get('artist')}."
         if tool.name == "summarize_document":
             preview = re.sub(r"\s+", " ", str(result.get("preview") or "")).strip()
             if not preview:
@@ -2494,12 +3647,160 @@ class VegaBrain:
                 return text.split(keyword, 1)[1].strip()
         return ""
 
+    # ==================================================================
+    # SPOTIFY — extração de parâmetros da fala natural
+    # ==================================================================
+
+    _SPOTIFY_PLAY_TRIGGERS = (
+        "toca", "toque", "toca", "toca a", "coloca a", "poe a",
+        "põe a", "coloca o", "poe o", "põe o", "quero ouvir",
+        "quero escutar", "manda um som", "solta o som",
+    )
+    _SPOTIFY_CONTROL_MAP = (
+        (r"\b(?:paus[ae]r?|parar|para isso)\b", "pause"),
+        (r"\b(?:continu[ae]r?|retomar|despaus[ae]r?|resum[ei]r?)\b", "resume"),
+        (r"\b(?:proxim[ao] faixa|proxim[ao] musica|pula|pular|passa|proxima|prox)\b", "next"),
+        (r"\b(?:anterior|volta|voltar|retrocede)\b", "previous"),
+        (r"\b(?:tira o aleatorio|desembaralha|sem aleatorio|na ordem|sem embaralhar)\b", "shuffle_off"),
+        (r"\b(?:aleatorio|embaralh[ae]r?|shuffle)\b", "shuffle_on"),
+    )
+
+    def _build_spotify_parameters(self, tool_name, norm_ascii, original_text):
+        """Extrai query/ação/volume da fala para as ferramentas Spotify."""
+        params = {}
+        if tool_name == "spotify_play":
+            query = self._extract_spotify_query(norm_ascii)
+            if query:
+                params["query"] = query
+            return params
+        if tool_name == "spotify_control":
+            params.update(self._extract_spotify_control(norm_ascii))
+            return params
+        if tool_name == "spotify_queue":
+            params["action"] = "add" if re.search(
+                r"\b(?:adiciona|coloca|poe|põe|manda)\b", norm_ascii
+            ) else "view"
+            query = self._extract_spotify_query(norm_ascii)
+            if query:
+                params["query"] = query
+            return params
+        # now_playing e playlists não recebem nada da fala.
+        return params
+
+    def _extract_spotify_query(self, norm_ascii):
+        """Tira o OBJETO do pedido: 'toca efe' -> 'efe'.
+
+        Estratégia: corta no gatilho e limpa palavras de função (a, a
+        playlist, minhas curtidas...), preservando o nome que interessa.
+        Para pedidos de FILA ('adiciona X na fila'), extrai o objeto entre
+        o verbo e o 'na/pra fila'.
+        """
+        # Fila: 'adiciona evidencias na fila' -> 'evidencias'.
+        queue_match = re.search(
+            r"\b(?:adiciona|coloca|poe|põe|manda)\s+(.+?)\s+(?:na|pra|para a|na proxima)\s+fila\b",
+            norm_ascii,
+        )
+        if queue_match:
+            return queue_match.group(1).strip(" ?!")
+        for trigger in sorted(self._SPOTIFY_PLAY_TRIGGERS, key=len, reverse=True):
+            match = re.search(rf"\b{re.escape(trigger)}\s+(.+)$", norm_ascii)
+            if match:
+                rest = match.group(1).strip()
+                # Remove frases de função no início do resto.
+                rest = re.sub(
+                    r"^(?:a |o |as |os |uma |um |minha |meu |pela |pelo |"
+                    r"playlist |lista |musica |musicas |sons? )+",
+                    " ", rest,
+                ).strip()
+                # 'curtidas' vira pedido especial (a ferramenta sabe lidar).
+                if re.match(r"^(?:minhas )?curtidas?", rest):
+                    return "curtidas"
+                return rest.strip(" ?!")
+        return ""
+
+    def _extract_spotify_control(self, norm_ascii):
+        """Ação de controle + volume quando presente."""
+        params = {}
+        for pattern, action in self._SPOTIFY_CONTROL_MAP:
+            if re.search(pattern, norm_ascii):
+                params["action"] = action
+                break
+        volume_match = re.search(r"\b(?:volume|som)\s*(?:para|a|em|de)?\s*(\d{1,3})", norm_ascii)
+        if volume_match:
+            params["volume"] = int(volume_match.group(1))
+            if not params.get("action"):
+                params["action"] = "volume"
+            return params
+        if re.search(r"\b(?:aumenta|sube|sobe)\b", norm_ascii) and "volume" in norm_ascii or "aumenta o som" in norm_ascii:
+            params["action"] = "volume_up"
+        elif re.search(r"\b(?:abaixa|diminui|baixa)\b", norm_ascii) and ("volume" in norm_ascii or "som" in norm_ascii):
+            params["action"] = "volume_down"
+        return params
+
     @staticmethod
     def _extract_named_entity(text, candidates):
         for candidate in sorted(candidates, key=len, reverse=True):
             if candidate in text:
                 return candidate
         return ""
+
+    # ==========================================================
+    # MULTI-INTENÇÃO — várias ações numa única fala
+    # ==========================================================
+
+    _MULTI_INTENT_SPLIT = re.compile(
+        # Só CONSUME o conectivo (e/depois/então...), vírgula ou ponto-e-vírgula;
+        # o verbo seguinte fica na cláusula nova — alternância que engolia "abre"/"toca"
+        # cortava a segunda ação pela metade ("aumenta o volume e abre o bloco" virava
+        # "... o bloco de notas").
+        r"\s*(?:(?:,|;)\s*(?:\be\b|\bdepois\b|\bent[ãa]o\b)?|\b(?:e\s+depois|depois|e\s+ent[ãa]o|ent[ãa]o|e\s+tamb[ée]m|"
+        r"tamb[ée]m|e\s+de\s+quebra|e\s+j[áa]\s+aproveita|e\s+aproveita|e)\b)\s*"
+        r"(?=(?:me\s+)?(?:fala|diga|fale|faz|fa[çc]a|abre|abra|abrir|toca|toque|"
+        r"tocar|mostra|mostre|pesquisa|pesquise|procura|procure|busca|busque|"
+        r"coloca|coloque|tira|tire|fecha|feche|aumenta|abaixa|diminui|liga|desliga|quanto|qual|"
+        r"que\s+horas|que\s+dia)\b)",
+        re.IGNORECASE)
+
+    def _process_multi_intent(self, text):
+        """Executa VÁRIAS ações de uma única fala composta.
+
+        "toca uma musica e abre a calculadora e me fala a previsão do tempo"
+        tem TRÊS intenções. Antes, só a primeira era executada e o resto da
+        frase virava lixo no comando (BUG REAL do Endriw, 21/10/2026).
+
+        Divide a fala nos conectivos, tenta resolver cada cláusula
+        independentemente (comando local ou ferramenta) e, se pelo menos 2
+        forem resolvidas, executa todas e junta as respostas. Com menos de 2
+        resolvidas devolve None — a fala segue pelo fluxo normal.
+        """
+        if not isinstance(text, str) or not text.strip():
+            return None
+        # Gate de custo: fala sem verbo de ação nunca vira multi-intenção.
+        parts = [
+            p.strip(" ,.!?;:")
+            for p in self._MULTI_INTENT_SPLIT.split(text.strip())
+            if p and p.strip(" ,.!?;:")
+        ]
+        if len(parts) < 2:
+            return None
+        # Pergunta pura de hora/data numa cláusula é atendida de graça.
+        resolved = []  # (cláusula, resposta)
+        for part in parts:
+            time_answer = answer_time_or_date_question(part)
+            if time_answer:
+                resolved.append((part, time_answer))
+                continue
+            response = self._process_command(part)
+            if response is None:
+                response = self._process_tool_request(part)
+            if response is None:
+                return None  # uma cláusula não resolvida: fluxo normal decide
+            resolved.append((part, response))
+        if len(resolved) < 2:
+            return None
+        # Executa de fato e junta: cada cláusula já executou sua ação dentro
+        # de _process_command/_process_tool_request acima.
+        return " ".join(response for _, response in resolved)
 
     def _process_command(self, text):
 
@@ -2567,6 +3868,21 @@ class VegaBrain:
                 routed = self._route_via_semantic_router(normalized)
                 if routed is not None:
                     return routed
+            # TÓPICO DE MÍDIA: quando a VEGA toca/abre mídia, registra no
+            # orquestrador — "o que vc acha dessa musica?" e "volta para o
+            # video" precisam saber O QUE está tocando/aberto. Sem isto, o
+            # "dessa" não tinha antecedente e a IA respondia no vácuo.
+            if response and getattr(self, "orchestrator", None) is not None:
+                try:
+                    players = self.commands._open_players() if hasattr(self.commands, "_open_players") else {}
+                    for kind, info in players.items():
+                        label = "a música" if kind == "music" else "o vídeo"
+                        self.orchestrator.note_tool_receipt(
+                            f"{label} {info.get('query', '')} está aberto na interface",
+                            f"{label} {info.get('query', '')}",
+                        )
+                except Exception:
+                    pass
             self._remember_opened_app_from_command(normalized, response)
             # Contexto de tarefa: app aberto por comando vira a tarefa atual.
             if getattr(self, "_last_opened_app", None):
@@ -2644,6 +3960,29 @@ class VegaBrain:
         intent = routed["intent"]
         params = routed["params"] or {}
 
+        # FIREWALL DE DOMÍNIO: quando a fala claramente pede CRIAÇÃO de
+        # conteúdo (slide/apresentação/documento/planilha), nenhuma intenção
+        # de MÍDIA (música, vídeo, player) pode executar — nem se o modelo
+        # classificar errado. Foi exatamente o bug real: "faça um slide sobre
+        # política" caiu no router e TOCOU MÚSICA. A fala errada volta None e
+        # segue o fluxo de conversa, que entende o pedido de criação.
+        folded = re.sub(r"[^a-z0-9\s]", " ", unicodedata.normalize("NFKD", str(text or "").lower()))
+        folded = re.sub(r"\s+", " ", "".join(
+            c for c in folded if not unicodedata.combining(c)
+        )).strip()
+        wants_creation = re.search(
+            r"\b(?:slide|slides|apresentac\w+|powerpoint|pptx?|documento|docx|relatorio|planilha|xlsx|spreadsheet|redacao|trabalho)\b",
+            folded,
+        )
+        media_intents = (
+            "play_music", "music", "spotify", "media", "video", "youtube",
+            "trending", "player", "song",
+        )
+        if wants_creation and any(term in intent.lower() for term in media_intents):
+            print(f"[VEGA Router] Bloqueado: fala pede criação de conteúdo, "
+                  f"mas o modelo classificou '{intent}'. Segue fluxo normal.")
+            return None
+
         # A execução é pelo catálogo do parser: mesma segurança, mesmo custo.
         catalog = getattr(self.commands_parser, "_intent_catalog", None)
         if catalog is None:
@@ -2680,6 +4019,42 @@ class VegaBrain:
             commands=self.commands,
             parser=self.commands_parser,
         )
+
+    @staticmethod
+    def _looks_like_pending_security_reply(text):
+        """A fala é uma resposta plausível à pendência de ação perigosa?
+
+        Confirmações ("sim, confirmo", "pode", PIN, "confirma e apaga")
+        interceptam. Falas sobre outro assunto ("que horas são", "notícias",
+        "toca playlist", "lembre que...") NÃO — elas seguem o fluxo normal
+        e a pendência continua esperando. Sem isto, uma pendência esquecida
+        sequestrava a VEGA inteira.
+        """
+        normalized = (text or "").lower().strip()
+        if not normalized:
+            return False
+        # PIN ditado/digitado é sempre resposta à pendência.
+        if VegaBrain._extract_security_pin(normalized):
+            return True
+        if VegaBrain._has_security_confirmation(normalized):
+            return True
+        # Falas curtas: só se forem palavras de CONFIRMAÇÃO/NEGAÇÃO conhecidas
+        # ("sim", "pode", "não", "confirmo", "ok"). Qualquer outra coisa
+        # ("noticias", "esporte", "volume") é outro assunto — segue o fluxo.
+        short_words = {
+            "sim", "pode", "pode sim", "confirmo", "confirmar", "ok", "beleza",
+            "blz", "certo", "certeza", "manda", "vai", "faz", "apaga",
+            "nao", "não", "nenhum", "negativo", "para", "parar", "cancela",
+        }
+        if len(normalized.split()) <= 2:
+            return any(w in normalized for w in short_words)
+        # Escolha de pasta/arquivo: a pendência pergunta "em qual pasta?" ou
+        # "qual dos arquivos?", então uma resposta que cita "pasta" ou
+        # "arquivo" é claramente a resposta à pendência (ex.: "na pasta vídeos").
+        if "pasta" in normalized or "arquivo" in normalized:
+            return True
+        # Frases sobre outro assunto: não é resposta.
+        return False
 
     @staticmethod
     def _has_security_confirmation(text):
@@ -2923,6 +4298,23 @@ class VegaBrain:
     def _process_pending_security_response(self, text):
         if not self._pending_dangerous_action:
             return None
+        #
+        # ESCAPE HATCH: palavras de CANCELAMENTO liberam a pendência na hora.
+        # Sem isto, uma pendência esquecida sequestrava TODAS as falas seguintes
+        # ("que horas são" recebia "Ação perigosa pendente") e a VEGA ficava
+        # presa até o usuário adivinhar o ritual de confirmação.
+        import re as _re
+        if _re.search(r"\b(cancel(?:a|ar|ela)?|desist(?:o|ir)|esquece|esque\u00e7a|deixa)\b", text):
+            self._pending_dangerous_action = None
+            return "Ação perigosa cancelada. Pode falar o que quiser."
+        # CONFIRMAÇÃO OU OUTRO ASSUNTO?
+        # Se a fala é claramente sobre OUTRO assunto (pergunta de hora/data,
+        # ferramenta, música, lembrete...), ela NÃO deve ser capturada pela
+        # pendência — responde-se a fala e a pendência continua esperando.
+        # Só intercepta: confirmação explícita, PIN, ou fala ambígua curta
+        # ("sim", "pode", "confirmo") que plausivelmente responde à pendência.
+        if not self._looks_like_pending_security_reply(text):
+            return None
         if (
             isinstance(self._pending_dangerous_action, dict)
             and self._pending_dangerous_action.get("kind")
@@ -3101,6 +4493,102 @@ class VegaBrain:
     # MEMÓRIA
     # ==========================================================
 
+    def _answer_from_memory(self, text):
+        """Responde perguntas cuja resposta JÁ está na memória permanente.
+
+        Devolve str quando a memória responde; None quando a fala deve seguir
+        o fluxo normal (ferramenta/IA). Regras:
+        - Pergunta de lugar ("onde fica X?", "onde está X?", "cadê X?")
+          consultada ANTES de geocoding: se existe memória sobre X, responda
+          por ela. Cidades/países reais continuam indo ao geocoding porque
+          "onde fica Paris" não tem memória (a menos que o usuário tenha
+          guardado uma — nesse caso a memória dele vence, o que é correto).
+        - Pergunta genérica ("quando é o aniversário da minha mãe?") acha a
+          memória pelo assunto.
+        """
+        if not text:
+            return None
+        normalized = text.strip().lower().rstrip("?!").strip()
+        if not normalized:
+            return None
+
+        place = re.match(
+            r"(?:onde|aonde)\s+(?:fica|ficam|esta|está|estao|estão|tá|ta)\s+(?:o|a|os|as|meu|minha)?\s*(.+)$",
+            normalized,
+        )
+        subject = None
+        if place:
+            subject = place.group(1).strip()
+        else:
+            # Pergunta direta sobre o assunto guardado: "quando é o
+            # aniversário da minha mãe?", "qual o meu pin?" etc.
+            # "esse/esse tal de/isso" marciam o assunto: "quem é ESSE tal de
+            # doctor doom" capturava "esse tal de doctor" em vez da pessoa.
+            # O "e/é" é OPCIONAL: "qual o princípio da vega?", "quem Dom
+            # Casmurro" não têm verbo, mas são perguntas de memória legítimas.
+            m = re.match(
+                r"(?:quando|qual|quais|quem|o que|que)\s+(?:(?:e|é|sao|são|era|foi)\s+)?"
+                r"(?:o|a|os|as|meu|minha|esse|essa|isso|ese|esa)?\s*"
+                r"(?:tal\s+de\s+)?(.+)$",
+                normalized,
+            )
+            if m:
+                subject = m.group(1).strip()
+        if not subject:
+            return None
+
+        # Remove Artigos/referências possessivas residuais.
+        subject = re.sub(r"^(?:o|a|os|as|meu|minha|meus|minhas)\s+", "", subject).strip("?!").strip()
+        if not subject:
+            return None
+
+        permanent = self.memory.get_permanent()
+        subject_words = set(re.findall(r"\w{3,}", subject))
+        if not subject_words:
+            return None
+
+        best_key, best_value, best_score = None, None, 0
+        for key, memory in permanent.items():
+            value = memory.get("value") if isinstance(memory, dict) else memory
+            if not value:
+                continue
+            hay = f"{key} {value}".lower()
+            words = set(re.findall(r"\w{3,}", hay))
+            overlap = len(subject_words & words)
+            if overlap > best_score:
+                best_key, best_value, best_score = key, value, overlap
+
+        if best_score >= 1 and best_key:
+            # Anti-falso-positivo (bug do Endriw, 28/10/2026): "quem é esse
+            # tal de doctor doom" casava com "principio da vega" porque as
+            # memórias de identidade da VEGA são LONGAS e citam muitas
+            # palavras comuns — qualquer pergunta sobre pessoa/lugar que
+            # tivesse 1 palavra fora do vocabulário delas acabava 'respondida'
+            # por uma memória que nada tinha a ver. A memória só responde
+            # quando o ASSUNTO dela realmente aparece na pergunta (palavra
+            # da CHAVE presente na fala), não basta colisão no corpo do valor.
+            folded_key_words = set(re.findall(r"\w{3,}", best_key.strip().lower()))
+            folded_value_words = set(re.findall(r"\w{3,}", str(best_value).strip().lower()))
+            if not (folded_key_words & subject_words) and not (
+                folded_value_words & subject_words
+            ):
+                return None
+            # Chave contida no valor (ou genérica): só o fato, sem repetição
+            # ("a reuniao e quinta a reuniao e quinta as 10" — bug de fala).
+            folded_key = best_key.strip().lower()
+            folded_value = str(best_value).strip().lower()
+            if (
+                folded_key in {"informacao", "informação", "geral", "nota"}
+                or folded_key in folded_value
+                or folded_value.startswith(folded_key)
+            ):
+                return f"Pela minha memória: {best_value}."
+            # Fórmula genérica: chave não aparece nem na fala nem no início do
+            # valor (ex.: "qual e o meu nome" -> "origem do nome vega ...").
+            # Monta a frase com a CHAVE como rótulo: lê natural.
+            return f"Pela minha memória: {best_key} {best_value}."
+        return None
+
     def _remember(self, text):
 
         content = text[
@@ -3114,7 +4602,31 @@ class VegaBrain:
                 "que eu lembre?"
             )
 
-        if " é " in content.lower():
+        folded = content.lower()
+
+        # "X fica na/em/no Y" — a chave vira X (o assunto), o valor vira Y.
+        # Antes, sem o " é ", caía na chave genérica "informacao", que é
+        # SOBRESCRITA pelo próximo lembrete — a pergunta seguinte ("onde fica
+        # a chave do sofrimento?") não achava nada (bug real do dia a dia).
+        place_match = re.match(
+            r"(.+?)\s+(?:fica|ficam|está|esta|ta|estão|estao)\s+(na|no|nas|nos|em)\s+(.+)$",
+            folded,
+        )
+        if place_match:
+            key = place_match.group(1).strip()
+            # Mantém a preposição ORIGINAL no valor: "fica na caixa vermelha",
+            # não "fica caixa vermelha" (a fala soava errada — bug real).
+            value = f"fica {place_match.group(2).strip()} {place_match.group(3).strip()}"
+            self.memory.remember(
+                key,
+                value,
+                category="pessoal",
+                importance=1.0,
+                source="explicit",
+            )
+            return f"Beleza. Vou lembrar que {key} {value}."
+
+        if " é " in folded:
 
             key, value = content.split(
                 " é ",
@@ -3137,8 +4649,14 @@ class VegaBrain:
                 f"{key} é {value}."
             )
 
+        # Sem estrutura "X é/fica Y": guarda por CHAVE DERIVADA do assunto
+        # (primeiras palavras), não na chave única "informacao" — que era
+        # SOBRESCRITA pelo próximo lembrete e perdia o anterior (bug real:
+        # "lembre que minha mãe faz aniversário dia 12" era apagado pelo
+        # lembrete seguinte).
+        key = " ".join(folded.split()[:4]).strip()
         self.memory.remember(
-            "informacao",
+            key,
             content,
             category="geral",
             importance=1.0,
@@ -3170,6 +4688,64 @@ class VegaBrain:
         self.memory.forget(key)
 
         return f"Esqueci '{key}'."
+
+    # ==========================================================
+    # LIMPAR MEMÓRIAS DIÁRIAS (histórico conversacional)
+    # ==========================================================
+
+    _DAILY_MEMORY_WIPE_RE = re.compile(
+        r"\b(?:deleta|deletar|delete|apaga|apagar|apague|limpa|limpar|limpe|"
+        r"zera|zerar|esvazia|esvaziar|exclua|excluir|remova|remover)\b[^.]{0,40}"
+        r"\b(?:memori(?:a|as)|memoria|memorias)\b[^.]{0,30}\b(?:diari(?:a|as|o|os)|"
+        r"do dia|cotidian[ao]|temporari(?:a|as|o|os)|todas|tudo|toda)\b|"
+        r"\b(?:deleta|deletar|delete|apaga|apagar|apague|limpa|limpar|limpe|"
+        r"zera|zerar|esvazia|esvaziar)\b[^.]{0,20}\b(?:historico|hist[oó]rico|"
+        r"conversas?|conversas? anteriores)\b",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def _is_daily_memory_wipe_request(cls, text):
+        """Detecta "deleta todas as suas memórias diárias" e variações.
+
+        Cuidado com a colisão: "esqueça X" apaga UM fato permanente e é
+        tratado antes; aqui é só o pedido de ZERAR o histórico diário.
+        "Memórias permanentes" NÃO casa (e não deve): a permanente é
+        intocável por comando — só fato a fato via "esqueça".
+        """
+        normalized = str(text or "").lower()
+        if not cls._DAILY_MEMORY_WIPE_RE.search(normalized):
+            return False
+        # Proteção explícita: se o pedido mencionar "permanente", não é wipe
+        # diário (e a resposta explica por que não executa).
+        return "permanente" not in normalized and "permanentes" not in normalized
+
+    def _wipe_daily_memories(self, text):
+        removed = self.memory.clear_daily()
+        # O contexto de conversa em RAM também morre: sem isso, a VEGA
+        # continuaria "lembrando" o que falou nesta sessão mesmo com os
+        # arquivos apagados.
+        conversation = getattr(self, "conversation", None)
+        if conversation is not None and hasattr(conversation, "clear"):
+            try:
+                conversation.clear()
+            except Exception:
+                pass
+        orchestrator = getattr(self, "orchestrator", None)
+        if orchestrator is not None and hasattr(orchestrator, "clear"):
+            try:
+                orchestrator.clear()
+            except Exception:
+                pass
+        if removed:
+            return (
+                f"Pronto, apaguei {removed} arquivo(s) de memória diária. "
+                "Minha memória permanente sobre você continua intacta."
+            )
+        return (
+            "Não havia memórias diárias para apagar — já estava limpo. "
+            "Minha memória permanente segue intacta."
+        )
 
     # ==========================================================
     # MOSTRAR MEMÓRIA

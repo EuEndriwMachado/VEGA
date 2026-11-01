@@ -71,6 +71,10 @@ class VegaMemory:
             "playlists.json"
         )
 
+        # Cache de leitura JSON por mtime (ver _load_json/_save_json): elimina
+        # releituras de disco repetidas dentro do mesmo turno de conversa.
+        # Precisa existir ANTES de _ensure_files, que grava via _save_json.
+        self._json_cache = {}
         self._ensure_files()
 
     # ==========================================================
@@ -166,7 +170,17 @@ class VegaMemory:
         return text
 
     def _load_json(self, path, default):
+        # CACHE POR MTIME: o mesmo arquivo pode ser lido e parseado várias
+        # vezes NUM ÚNICO turno (build_memory_context + search +
+        # retrieve_relevant + contextual_recall), e isso rodava ANTES do
+        # request ao modelo — somando dezenas de ms de latência local por
+        # pergunta. O cache invalida sozinho quando o mtime muda (a própria
+        # VEGA grava memórias), então a semântica de leitura não muda.
         try:
+            mtime = os.stat(path).st_mtime_ns
+            cached = self._json_cache.get(path)
+            if cached is not None and cached[0] == mtime:
+                return cached[1]
             with open(
                 path,
                 "r",
@@ -175,7 +189,8 @@ class VegaMemory:
 
                 data = json.load(file)
 
-                return data
+            self._json_cache[path] = (mtime, data)
+            return data
 
         except (
             FileNotFoundError,
@@ -205,6 +220,14 @@ class VegaMemory:
                 ensure_ascii=False,
                 indent=4
             )
+
+        # Pré-aquece o cache com o que acabou de ser gravado: a próxima
+        # leitura do MESMO turno (ex.: retrieve_relevant após remember) não
+        # relê o disco nem depende do mtime ter mudado.
+        try:
+            self._json_cache[path] = (os.stat(path).st_mtime_ns, data)
+        except OSError:
+            self._json_cache.pop(path, None)
 
     # ==========================================================
     # MEMÓRIA PERMANENTE
@@ -1037,8 +1060,14 @@ class VegaMemory:
 
         return "\n".join(lines)
 
-    def contextual_recall(self, query, limit=5):
-        """Returns query-aware memories and procedures relevant to the active context."""
+    def contextual_recall(self, query, limit=5, precomputed=None):
+        """Returns query-aware memories and procedures relevant to the active context.
+
+        `precomputed`: resultado já ranqueado de retrieve_relevant() sobre a
+        MESMA query. Quando fornecido, a varredura de episodic/semantic/
+        preference/procedural/error é pulada — o chamador já fez o trabalho
+        no mesmo turno (economia de leitura de disco e de parse).
+        """
         text = str(query or "").strip()
         if not text:
             return []
@@ -1063,7 +1092,10 @@ class VegaMemory:
                 "type": "permanent",
             })
 
-        for candidate in self.retrieve_relevant(text, limit=max(4, limit * 2)):
+        relevant = precomputed
+        if relevant is None:
+            relevant = self.retrieve_relevant(text, limit=max(4, limit * 2))
+        for candidate in relevant:
             item = candidate.get("item", {}) if isinstance(candidate, dict) else {}
             if not isinstance(item, dict):
                 continue
@@ -1143,6 +1175,25 @@ class VegaMemory:
                 result[key] = memory
 
         return result
+
+    def clear_daily(self):
+        """Apaga TODAS as memórias diárias (todos os dias salvos).
+
+        A memória PERMANENTE nunca é tocada — é a identidade e os fatos
+        explícitos que o usuário ensinou. Só o histórico conversacional
+        (data/memory/daily/*.json) é descartado.
+        """
+        removed = 0
+        if os.path.isdir(self.daily_path):
+            for day_file in os.listdir(self.daily_path):
+                full = os.path.join(self.daily_path, day_file)
+                if os.path.isfile(full):
+                    try:
+                        os.remove(full)
+                        removed += 1
+                    except OSError:
+                        pass
+        return removed
 
     def clear(self):
         """
